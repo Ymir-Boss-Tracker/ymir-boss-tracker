@@ -52,7 +52,7 @@ function initializeBossData() {
                 BOSS_DATA[type].floors[floorKey].bosses.push({
                     id: `${type.toLowerCase()}_${p}_${bossName.toLowerCase()}`,
                     name: bossName, respawnTime: 0, alerted: false,
-                    lastKilled: "", nextSpawn: "" 
+                    lastKilled: "", nextSpawn: ""
                 });
             });
         }
@@ -69,7 +69,7 @@ async function loadUserData() {
             if (b) { 
                 b.respawnTime = s.time; 
                 b.alerted = s.alerted;
-                b.lastKilled = s.lastKilled || ""; 
+                b.lastKilled = s.lastKilled || "";
                 b.nextSpawn = s.nextSpawn || "";
             }
         });
@@ -83,10 +83,7 @@ async function save() {
     ['Comum', 'Universal'].forEach(t => {
         for (const f in BOSS_DATA[t].floors) {
             BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                list.push({
-                    id: b.id, time: b.respawnTime, alerted: b.alerted,
-                    lastKilled: b.lastKilled, nextSpawn: b.nextSpawn
-                });
+                list.push({id: b.id, time: b.respawnTime, alerted: b.alerted, lastKilled: b.lastKilled, nextSpawn: b.nextSpawn});
             });
         }
     });
@@ -144,8 +141,6 @@ window.resetBoss = (id) => {
     const b = findBossById(id);
     b.respawnTime = 0; b.alerted = false;
     b.lastKilled = ""; b.nextSpawn = "";
-    const input = document.getElementById(`manual-input-${id}`);
-    if (input) input.value = ""; 
     save();
     render();
 };
@@ -187,24 +182,25 @@ function render() {
         const section = document.createElement('section');
         section.className = 'type-section';
         section.innerHTML = `<h2>${BOSS_DATA[type].name}</h2>`;
-        const grid = document.createElement('div');
-        grid.className = 'floors-container';
+        
+        const floorsContainer = document.createElement('div');
+        floorsContainer.className = 'floors-container';
+        
         for (const f in BOSS_DATA[type].floors) {
             const floorDiv = document.createElement('div');
             floorDiv.className = 'floor-section';
-            floorDiv.innerHTML = `<h3>${f}</h3>`;
+            floorDiv.innerHTML = `<h3>${f}</h3><div class="boss-grid"></div>`;
+            const bossGrid = floorDiv.querySelector('.boss-grid');
+
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 const infoMorte = boss.lastKilled ? `<div class="info-line">Morto: ${boss.lastKilled}</div>` : '';
                 const infoNasce = boss.nextSpawn ? `<div class="info-line">Nasce: ${boss.nextSpawn}</div>` : '';
                 
-                floorDiv.innerHTML += `
+                bossGrid.innerHTML += `
                     <div class="boss-card" id="card-${boss.id}">
                         <h4>${boss.name}</h4>
                         <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
-                        <div class="log-info">
-                            ${infoMorte}
-                            ${infoNasce}
-                        </div>
+                        <div class="log-info">${infoMorte}${infoNasce}</div>
                         <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
                         <div class="manual-box">
                             <input type="time" id="manual-input-${boss.id}" step="1">
@@ -213,9 +209,9 @@ function render() {
                         <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
                     </div>`;
             });
-            grid.appendChild(floorDiv);
+            floorsContainer.appendChild(floorDiv);
         }
-        section.appendChild(grid);
+        section.appendChild(floorsContainer);
         container.appendChild(section);
     });
 }
