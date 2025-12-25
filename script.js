@@ -26,6 +26,7 @@ let currentUser = null;
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 document.getElementById('export-btn').onclick = () => exportReport();
+document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -51,8 +52,7 @@ function initializeBossData() {
             BOSS_NAMES.forEach(bossName => {
                 BOSS_DATA[type].floors[floorKey].bosses.push({
                     id: `${type.toLowerCase()}_${p}_${bossName.toLowerCase()}`,
-                    name: bossName, respawnTime: 0, alerted: false,
-                    lastKilled: "", nextSpawn: ""
+                    name: bossName, respawnTime: 0, alerted: false
                 });
             });
         }
@@ -66,12 +66,7 @@ async function loadUserData() {
         const saved = docSnap.data().timers;
         saved.forEach(s => {
             const b = findBossById(s.id);
-            if (b) { 
-                b.respawnTime = s.time; 
-                b.alerted = s.alerted;
-                b.lastKilled = s.lastKilled || "";
-                b.nextSpawn = s.nextSpawn || "";
-            }
+            if (b) { b.respawnTime = s.time; b.alerted = s.alerted; }
         });
     }
     render();
@@ -83,7 +78,7 @@ async function save() {
     ['Comum', 'Universal'].forEach(t => {
         for (const f in BOSS_DATA[t].floors) {
             BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                list.push({id: b.id, time: b.respawnTime, alerted: b.alerted, lastKilled: b.lastKilled, nextSpawn: b.nextSpawn});
+                list.push({id: b.id, time: b.respawnTime, alerted: b.alerted});
             });
         }
     });
@@ -101,47 +96,54 @@ function findBossById(id) {
 
 window.killBoss = (id) => {
     const b = findBossById(id);
-    const agora = new Date();
-    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    const spawnDate = new Date(agora.getTime() + duration);
-    
-    b.respawnTime = spawnDate.getTime();
+    b.respawnTime = Date.now() + (id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS);
     b.alerted = false;
-    b.lastKilled = agora.toLocaleTimeString('pt-BR');
-    b.nextSpawn = spawnDate.toLocaleTimeString('pt-BR');
     save();
-    render();
 };
 
 window.setManualTime = (id) => {
-    const input = document.getElementById(`manual-input-${id}`);
-    const val = input.value;
-    if (!val) return;
+    const val = document.getElementById(`manual-input-${id}`).value;
+    if (!val) return alert("Selecione um horário completo (HH:MM:SS)!");
     
     const parts = val.split(':').map(Number);
+    const h = parts[0];
+    const m = parts[1];
+    const s = parts[2] || 0; 
+    
     const d = new Date(); 
-    d.setHours(parts[0], parts[1], parts[2] || 0, 0); 
+    d.setHours(h, m, s, 0); 
+    
     if (d > new Date()) d.setDate(d.getDate() - 1);
     
     const b = findBossById(id);
     const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    const spawnDate = new Date(d.getTime() + duration);
-
-    b.respawnTime = spawnDate.getTime();
+    b.respawnTime = d.getTime() + duration;
     b.alerted = false;
-    b.lastKilled = d.toLocaleTimeString('pt-BR');
-    b.nextSpawn = spawnDate.toLocaleTimeString('pt-BR');
-    
     save();
-    render();
 };
 
 window.resetBoss = (id) => {
     const b = findBossById(id);
     b.respawnTime = 0; b.alerted = false;
-    b.lastKilled = ""; b.nextSpawn = "";
     save();
+};
+
+// FUNÇÃO DE RESET TOTAL
+window.resetAllTimers = async () => {
+    if (!confirm("⚠️ ATENÇÃO: Deseja resetar TODOS os timers agora?")) return;
+    
+    ['Comum', 'Universal'].forEach(type => {
+        for (const f in BOSS_DATA[type].floors) {
+            BOSS_DATA[type].floors[f].bosses.forEach(boss => {
+                boss.respawnTime = 0;
+                boss.alerted = false;
+            });
+        }
+    });
+    
+    await save();
     render();
+    alert("Todos os bosses foram resetados para 'DISPONÍVEL'.");
 };
 
 function updateBossTimers() {
@@ -154,6 +156,7 @@ function updateBossTimers() {
                 if (!timerTxt || !card) return;
 
                 if (boss.respawnTime === 0 || boss.respawnTime <= now) {
+                    boss.respawnTime = 0;
                     timerTxt.textContent = "DISPONÍVEL!";
                     card.classList.remove('alert');
                 } else {
@@ -163,10 +166,10 @@ function updateBossTimers() {
                         boss.alerted = true;
                         save();
                     }
-                    const h = Math.floor(diff / 3600000).toString().padStart(2,'0');
-                    const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0');
-                    const s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
-                    timerTxt.textContent = `${h}:${m}:${s}`;
+                    const h = Math.floor(diff / 3600000);
+                    const m = Math.floor((diff % 3600000) / 60000);
+                    const s = Math.floor((diff % 60000) / 1000);
+                    timerTxt.textContent = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
                     card.classList.toggle('alert', diff <= FIVE_MINUTES_MS);
                 }
             });
@@ -181,26 +184,17 @@ function render() {
         const section = document.createElement('section');
         section.className = 'type-section';
         section.innerHTML = `<h2>${BOSS_DATA[type].name}</h2>`;
-        
-        const floorsContainer = document.createElement('div');
-        floorsContainer.className = 'floors-container';
-        
+        const grid = document.createElement('div');
+        grid.className = 'floors-container';
         for (const f in BOSS_DATA[type].floors) {
             const floorDiv = document.createElement('div');
             floorDiv.className = 'floor-section';
-            // Criamos uma div interna para segurar os bosses lado a lado
-            floorDiv.innerHTML = `<h3>${f}</h3><div class="boss-grid-row"></div>`;
-            const bossGrid = floorDiv.querySelector('.boss-grid-row');
-
+            floorDiv.innerHTML = `<h3>${f}</h3>`;
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
-                const infoMorte = boss.lastKilled ? `<div class="info-line">Morto: ${boss.lastKilled}</div>` : '';
-                const infoNasce = boss.nextSpawn ? `<div class="info-line">Nasce: ${boss.nextSpawn}</div>` : '';
-                
-                bossGrid.innerHTML += `
+                floorDiv.innerHTML += `
                     <div class="boss-card" id="card-${boss.id}">
                         <h4>${boss.name}</h4>
                         <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
-                        <div class="log-info">${infoMorte}${infoNasce}</div>
                         <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
                         <div class="manual-box">
                             <input type="time" id="manual-input-${boss.id}" step="1">
@@ -209,31 +203,52 @@ function render() {
                         <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
                     </div>`;
             });
-            floorsContainer.appendChild(floorDiv);
+            grid.appendChild(floorDiv);
         }
-        section.appendChild(floorsContainer);
+        section.appendChild(grid);
         container.appendChild(section);
     });
 }
 
 function exportReport() {
     const agora = new Date();
-    let text = `=== RELATÓRIO DE BOSSES - YMIR ===\nGerado em: ${agora.toLocaleString('pt-BR')}\n\n`;
+    const dataStr = agora.toLocaleDateString('pt-BR');
+    const horaStr = agora.toLocaleTimeString('pt-BR');
+
+    let text = `=== RELATÓRIO COMPLETO DE BOSSES - YMIR ===\n`;
+    text += `Gerado em: ${dataStr}, ${horaStr}\n`;
+    text += `===========================================\n\n`;
+
     ['Comum', 'Universal'].forEach(type => {
-        text += `>>> ${type.toUpperCase()} <<<\n`;
-        for (const f in BOSS_DATA[type].floors) {
-            text += `[${f}]\n`;
-            BOSS_DATA[type].floors[f].bosses.forEach(b => {
-                const status = b.respawnTime > 0 ? `Morto: ${b.lastKilled} | Nasce: ${b.nextSpawn}` : "DISPONÍVEL";
-                text += `${b.name.padEnd(10, ' ')} | ${status}\n`;
+        const tempoRespawn = type === 'Universal' ? 2 * 60 * 60 * 1000 : 8 * 60 * 60 * 1000;
+        text += `>>> FOLKVANGR ${type.toUpperCase()} <<<\n\n`;
+
+        for (const floorKey in BOSS_DATA[type].floors) {
+            text += `[${floorKey}]\n`;
+            
+            BOSS_DATA[type].floors[floorKey].bosses.forEach(boss => {
+                const nomeBoss = boss.name.padEnd(10, ' ');
+                
+                if (boss.respawnTime > 0) {
+                    const horaNasce = new Date(boss.respawnTime);
+                    const horaMorto = new Date(boss.respawnTime - tempoRespawn);
+                    
+                    const nasceTxt = horaNasce.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    const mortoTxt = horaMorto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                    
+                    text += `${nomeBoss} | Morto: ${mortoTxt} | Nasce: ${nasceTxt}\n`;
+                } else {
+                    text += `${nomeBoss} | STATUS: Sem informação\n`;
+                }
             });
-            text += `\n`;
+            text += `-------------------------------------------\n\n`;
         }
     });
+
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Relatorio_Ymir.txt`;
+    link.download = `Relatorio_Bosses_Ymir.txt`;
     link.click();
 }
 
