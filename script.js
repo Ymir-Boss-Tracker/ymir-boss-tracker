@@ -102,22 +102,21 @@ window.killBoss = (id) => {
 
 window.setManualTime = (id) => {
     const val = document.getElementById(`manual-input-${id}`).value;
-    if (!val) return alert("Selecione um horário completo (HH:MM:SS)!");
+    if (!val) return alert("Por favor, insira o horário (HH:MM:SS)");
     
-    // Suporte a HH:MM:SS
+    // Divide a entrada em 3 partes: horas, minutos e segundos
     const parts = val.split(':').map(Number);
     const h = parts[0];
     const m = parts[1];
-    const s = parts[2] || 0; 
+    const s = parts[2] || 0; // Se não houver segundos, define como 0
     
     const d = new Date(); 
-    d.setHours(h, m, s, 0); 
+    d.setHours(h, m, s, 0); // Define o tempo completo
     
     if (d > new Date()) d.setDate(d.getDate() - 1);
     
     const b = findBossById(id);
-    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = d.getTime() + duration;
+    b.respawnTime = d.getTime() + (id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS);
     b.alerted = false;
     save();
 };
@@ -215,7 +214,7 @@ function exportReport() {
                     const horaNasce = new Date(boss.respawnTime);
                     const horaMorto = new Date(boss.respawnTime - tempoRespawn);
                     
-                    // Formato HH:MM:SS no relatório
+                    // Ajustado para exibir segundos no relatório
                     const nasceTxt = horaNasce.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     const mortoTxt = horaMorto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                     
@@ -234,4 +233,5 @@ function exportReport() {
     link.download = `Relatorio_Bosses_Ymir.txt`;
     link.click();
 }
+
 setInterval(() => { if(currentUser) updateBossTimers(); }, 1000);
