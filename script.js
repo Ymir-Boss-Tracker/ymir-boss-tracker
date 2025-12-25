@@ -116,7 +116,7 @@ window.killBoss = (id) => {
 window.setManualTime = (id) => {
     const input = document.getElementById(`manual-input-${id}`);
     const val = input.value;
-    if (!val) return alert("Insira o horário HH:MM:SS");
+    if (!val) return;
     
     const parts = val.split(':').map(Number);
     const d = new Date(); 
@@ -133,7 +133,6 @@ window.setManualTime = (id) => {
     b.nextSpawn = spawnDate.toLocaleTimeString('pt-BR');
     
     save();
-    input.value = ""; 
     render();
 };
 
@@ -189,8 +188,9 @@ function render() {
         for (const f in BOSS_DATA[type].floors) {
             const floorDiv = document.createElement('div');
             floorDiv.className = 'floor-section';
-            floorDiv.innerHTML = `<h3>${f}</h3><div class="boss-grid"></div>`;
-            const bossGrid = floorDiv.querySelector('.boss-grid');
+            // Criamos uma div interna para segurar os bosses lado a lado
+            floorDiv.innerHTML = `<h3>${f}</h3><div class="boss-grid-row"></div>`;
+            const bossGrid = floorDiv.querySelector('.boss-grid-row');
 
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 const infoMorte = boss.lastKilled ? `<div class="info-line">Morto: ${boss.lastKilled}</div>` : '';
@@ -218,18 +218,14 @@ function render() {
 
 function exportReport() {
     const agora = new Date();
-    let text = `=== RELATÓRIO DE BOSSES - YMIR ===\nGerado em: ${agora.toLocaleString('pt-BR')}\n==================================\n\n`;
+    let text = `=== RELATÓRIO DE BOSSES - YMIR ===\nGerado em: ${agora.toLocaleString('pt-BR')}\n\n`;
     ['Comum', 'Universal'].forEach(type => {
         text += `>>> ${type.toUpperCase()} <<<\n`;
         for (const f in BOSS_DATA[type].floors) {
             text += `[${f}]\n`;
             BOSS_DATA[type].floors[f].bosses.forEach(b => {
-                const nome = b.name.padEnd(10, ' ');
-                if (b.lastKilled) {
-                    text += `${nome} | Morto: ${b.lastKilled} | Nasce: ${b.nextSpawn}\n`;
-                } else {
-                    text += `${nome} | DISPONÍVEL\n`;
-                }
+                const status = b.respawnTime > 0 ? `Morto: ${b.lastKilled} | Nasce: ${b.nextSpawn}` : "DISPONÍVEL";
+                text += `${b.name.padEnd(10, ' ')} | ${status}\n`;
             });
             text += `\n`;
         }
