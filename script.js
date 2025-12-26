@@ -2,7 +2,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-// WEBHOOK CONFIGURADO
 const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1453986988125458524/dFMLs1p0MGfMB9asjuYErVLdz8r0mcfnSJT1OT_weNbDy9Oux9mm8-3cZwr9pCtRiluI";
 
 const firebaseConfig = {
@@ -34,13 +33,13 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// NOVA FUNÇÃO: ENVIA RELATÓRIO COMPLETO PARA O DISCORD
 async function sendFullReportToDiscord() {
     if (!DISCORD_WEBHOOK_URL) return;
+    const btn = document.getElementById('sync-discord-btn');
+    btn.textContent = "⌛ Enviando...";
+    btn.disabled = true;
 
-    const agora = new Date();
     let allBosses = [];
-
     ['Comum', 'Universal'].forEach(type => {
         for (const f in BOSS_DATA[type].floors) {
             BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b }); });
@@ -51,42 +50,35 @@ async function sendFullReportToDiscord() {
     const available = allBosses.filter(b => b.respawnTime === 0);
 
     let nextRespawnsText = active.length > 0 
-        ? active.map(b => `• **${b.name}** (${b.floor} ${b.type.substring(0,3)}) - Nasce às: \`${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\``).join('\n')
+        ? active.map(b => `• **${b.name}** (${b.floor}) - Nasce às: \`${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\``).join('\n')
         : "Nenhum boss em contagem.";
 
     let availableText = available.length > 0
-        ? available.map(b => `✅ ${b.name} (${b.floor} ${b.type.substring(0,3)})`).join(', ')
-        : "Nenhum boss disponível.";
+        ? available.map(b => `✅ ${b.name} (${b.floor})`).join(', ')
+        : "Todos em cooldown.";
 
     const payload = {
         embeds: [{
-            title: "⚔️ STATUS ATUAL DOS BOSSES - YMIR",
-            description: `Relatório gerado por: **${currentUser.displayName}**`,
-            color: 3447003, // Azul
+            title: "⚔️ STATUS DOS BOSSES - LEGEND OF YMIR",
+            description: `Atualizado por: **${currentUser.displayName}**`,
+            color: 5814783,
             fields: [
                 { name: "⏳ PRÓXIMOS RESPAWNS", value: nextRespawnsText },
                 { name: "🟢 DISPONÍVEIS AGORA", value: availableText }
             ],
-            footer: { text: "Atualizado via Ymir Tracker" },
-            timestamp: agora.toISOString()
+            timestamp: new Date().toISOString()
         }]
     };
 
     try {
-        await fetch(DISCORD_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        alert("Relatório enviado para o Discord com sucesso!");
+        await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+        btn.textContent = "✅ Sincronizado!";
     } catch (err) {
-        console.error("Erro ao enviar:", err);
-        alert("Erro ao enviar para o Discord.");
+        btn.textContent = "❌ Erro";
+    } finally {
+        setTimeout(() => { btn.textContent = "🔵 Sincronizar Discord"; btn.disabled = false; }, 3000);
     }
 }
-
-// REMOVIDA a chamada automática de 'sendDiscordAlert' nas funções de kill
-// Agora as atualizações são apenas locais/Firebase até que você clique no botão.
 
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
@@ -103,14 +95,8 @@ document.getElementById('toggle-view-btn').onclick = () => {
 
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
-
-// ATUALIZADO: O botão de exportar TXT agora também envia para o Discord
-document.getElementById('export-btn').onclick = () => {
-    exportReport(); // Mantém o download do TXT para você
-    sendFullReportToDiscord(); // Envia o relatório formatado para o Discord
-};
-
-document.getElementById('export-img-btn').onclick = () => exportImage();
+document.getElementById('export-btn').onclick = () => exportReport();
+document.getElementById('sync-discord-btn').onclick = () => sendFullReportToDiscord();
 document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
 
 onAuthStateChanged(auth, (user) => {
@@ -306,31 +292,6 @@ function render() {
     if (isCompactView) container.classList.add('compact-mode');
 }
 
-function exportImage() {
-    const btnImg = document.getElementById('export-img-btn');
-    const originalText = btnImg.textContent;
-    document.body.classList.add('printing');
-    btnImg.textContent = "📸 Gerando...";
-
-    setTimeout(() => {
-        html2canvas(document.querySelector("#app-content"), {
-            backgroundColor: "#0a0a0c",
-            scale: 2,
-            logging: false,
-            useCORS: true,
-            allowTaint: true
-        }).then(canvas => {
-            const link = document.createElement('a');
-            const dataAtual = new Date().toLocaleDateString().replace(/\//g, '-');
-            link.download = `Status_Boss_Ymir_${dataAtual}.png`;
-            link.href = canvas.toDataURL("image/png");
-            link.click();
-            document.body.classList.remove('printing');
-            btnImg.textContent = originalText;
-        });
-    }, 500);
-}
-
 function exportReport() {
     const agora = new Date();
     let allBosses = [];
@@ -343,35 +304,13 @@ function exportReport() {
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     const available = allBosses.filter(b => b.respawnTime === 0);
 
-    let text = `╔════════════════════════════════════════╗\n`;
-    text += `  ⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️  \n`;
-    text += `  Gerado em: ${agora.toLocaleDateString()} ${agora.toLocaleTimeString()}\n`;
-    text += `╚════════════════════════════════════════╝\n\n`;
-
-    text += `>>> ⏳ PRÓXIMOS RESPAWNS (ORDEM CRONOLÓGICA)\n\n`;
-    text += `\`\`\`ml\n`;
-    if (active.length > 0) {
-        active.forEach(b => {
-            const duration = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-            const nasce = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
-            const morto = new Date(b.respawnTime - duration).toLocaleTimeString('pt-BR');
-            const label = `[${b.type.substring(0,3)}] ${b.floor} - ${b.name}`;
-            text += `${label.padEnd(25)} | M: ${morto} | NASCE: ${nasce}\n`;
-        });
-    } else {
-        text += `Nenhum boss em contagem.\n`;
-    }
-    text += `\`\`\`\n\n`;
-
-    text += `>>> ✅ DISPONÍVEIS\n\n`;
-    text += `\`\`\`fix\n`;
-    if (available.length > 0) {
-        available.forEach(b => { text += `[${b.type.substring(0,3)}] ${b.floor} - ${b.name}\n`; });
-    } else {
-        text += `Todos em cooldown.\n`;
-    }
-    text += `\`\`\`\n\n`;
-    text += `*Copiado do Ymir Tracker* 🛡️`;
+    let text = `⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️\n\n`;
+    text += `⏳ PRÓXIMOS RESPAWNS:\n`;
+    active.forEach(b => {
+        text += `${b.floor} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\n`;
+    });
+    text += `\n✅ DISPONÍVEIS:\n`;
+    available.forEach(b => { text += `${b.floor} - ${b.name}\n`; });
 
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
