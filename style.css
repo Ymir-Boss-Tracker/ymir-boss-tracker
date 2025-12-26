@@ -10,9 +10,10 @@ body {
 
 header.main-banner { 
     position: relative;
-    background-image: url('https://assets.repress.co.kr/photos/a36258edead972038e83cc022955d0fd/original.png');
+    /* Imagem atualizada conforme solicitado */
+    background-image: url('https://image.mycard520.com/globalmycard/member/guide/264859/1140x500.webp');
     background-size: cover;
-    background-position: center 15%;
+    background-position: center;
     min-height: 250px;
     display: flex;
     align-items: center; justify-content: center;
