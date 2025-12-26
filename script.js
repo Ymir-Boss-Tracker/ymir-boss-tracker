@@ -99,42 +99,38 @@ window.killBoss = (id) => {
     b.respawnTime = Date.now() + (id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS);
     b.alerted = false;
     save();
+    render(); // Forçar render para atualizar Morto/Nasce
 };
 
 window.setManualTime = (id) => {
     const val = document.getElementById(`manual-input-${id}`).value;
     if (!val) return alert("Selecione um horário completo (HH:MM:SS)!");
-    
     const parts = val.split(':').map(Number);
-    const h = parts[0];
-    const m = parts[1];
-    const s = parts[2] || 0; 
-    
+    const h = parts[0], m = parts[1], s = parts[2] || 0;
     const d = new Date(); 
-    d.setHours(h, m, s, 0); 
-    
+    d.setHours(h, m, s, 0);
     if (d > new Date()) d.setDate(d.getDate() - 1);
-    
     const b = findBossById(id);
     const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
     b.respawnTime = d.getTime() + duration;
     b.alerted = false;
     save();
+    render();
 };
 
 window.resetBoss = (id) => {
     const b = findBossById(id);
     b.respawnTime = 0; b.alerted = false;
     save();
+    render();
 };
 
 window.resetAllTimers = async () => {
-    if (!confirm("⚠️ ATENÇÃO: Deseja resetar TODOS os timers agora?")) return;
+    if (!confirm("⚠️ Deseja resetar TODOS os timers agora?")) return;
     ['Comum', 'Universal'].forEach(type => {
         for (const f in BOSS_DATA[type].floors) {
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
-                boss.respawnTime = 0;
-                boss.alerted = false;
+                boss.respawnTime = 0; boss.alerted = false;
             });
         }
     });
@@ -187,10 +183,18 @@ function render() {
             floorDiv.className = 'floor-section';
             let floorHtml = `<h3>${f}</h3><div class="boss-grid">`;
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
+                const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
+                const mortoStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--:--";
+                const nasceStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--:--";
+
                 floorHtml += `
                     <div class="boss-card" id="card-${boss.id}">
                         <h4>${boss.name}</h4>
                         <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
+                        <div class="static-times">
+                            <p>Morto: <span id="killed-${boss.id}">${mortoStr}</span></p>
+                            <p>Nasce: <span id="spawn-${boss.id}">${nasceStr}</span></p>
+                        </div>
                         <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
                         <div class="manual-box">
                             <input type="time" id="manual-input-${boss.id}" step="1">
@@ -208,63 +212,33 @@ function render() {
     });
 }
 
-// NOVA FUNÇÃO DE EXPORTAÇÃO COM ORDEM CRESCENTE
 function exportReport() {
     const agora = new Date();
-    const dataStr = agora.toLocaleDateString('pt-BR');
-    const horaStr = agora.toLocaleTimeString('pt-BR');
-
     let allBosses = [];
-
-    // 1. Coletar todos os bosses em uma lista plana
     ['Comum', 'Universal'].forEach(type => {
-        for (const floorKey in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[floorKey].bosses.forEach(boss => {
-                allBosses.push({...boss});
-            });
+        for (const f in BOSS_DATA[type].floors) {
+            BOSS_DATA[type].floors[f].bosses.forEach(b => allBosses.push({...b}));
         }
     });
 
-    // 2. Separar bosses com timer e sem timer
-    let activeBosses = allBosses.filter(b => b.respawnTime > 0);
-    let inactiveBosses = allBosses.filter(b => b.respawnTime === 0);
+    let active = allBosses.filter(b => b.respawnTime > 0).sort((a,b) => a.respawnTime - b.respawnTime);
+    let inactive = allBosses.filter(b => b.respawnTime === 0);
 
-    // 3. Ordenar os bosses ativos pelo tempo de respawn (crescente)
-    activeBosses.sort((a, b) => a.respawnTime - b.respawnTime);
-
-    let text = `=== RELATÓRIO CRONOLÓGICO DE BOSSES - YMIR ===\n`;
-    text += `Gerado em: ${dataStr}, ${horaStr}\n`;
-    text += `==============================================\n\n`;
-
-    text += `>>> PRÓXIMOS RESPANS (ORDEM CRONOLÓGICA) <<<\n\n`;
-
-    if (activeBosses.length === 0) {
-        text += `Nenhum boss com timer ativo no momento.\n`;
-    } else {
-        activeBosses.forEach(boss => {
-            const tempoRespawn = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-            const horaNasce = new Date(boss.respawnTime);
-            const horaMorto = new Date(boss.respawnTime - tempoRespawn);
-            
-            const nasceTxt = horaNasce.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            const mortoTxt = horaMorto.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            const label = `[${boss.type}] ${boss.floor} - ${boss.name}`;
-            text += `${label.padEnd(30, ' ')} | Morto: ${mortoTxt} | NASCE: ${nasceTxt}\n`;
-        });
-    }
-
-    text += `\n==============================================\n`;
-    text += `>>> BOSSES SEM INFORMAÇÃO / DISPONÍVEIS <<<\n\n`;
-
-    inactiveBosses.forEach(boss => {
-        text += `[${boss.type}] ${boss.floor} - ${boss.name}\n`;
+    let text = `=== RELATÓRIO CRONOLÓGICO YMIR (${agora.toLocaleDateString()} ${agora.toLocaleTimeString()}) ===\n\n`;
+    text += `>>> PRÓXIMOS RESPANS <<<\n`;
+    active.forEach(b => {
+        const dur = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
+        const n = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
+        const m = new Date(b.respawnTime - dur).toLocaleTimeString('pt-BR');
+        text += `${(b.type.substring(0,3) + " " + b.floor + " " + b.name).padEnd(25)} | M: ${m} | NASCE: ${n}\n`;
     });
+    text += `\n>>> DISPONÍVEIS <<<\n`;
+    inactive.forEach(b => text += `[${b.type}] ${b.floor} - ${b.name}\n`);
 
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Relatorio_Cronologico_Ymir.txt`;
+    link.download = `Relatorio_Ymir.txt`;
     link.click();
 }
 
