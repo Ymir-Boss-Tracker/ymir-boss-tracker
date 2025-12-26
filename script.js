@@ -52,7 +52,6 @@ async function sendFullReportToDiscord() {
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     const available = allBosses.filter(b => b.respawnTime === 0);
 
-    // CONSTRUÇÃO DO TEXTO ÚNICO (Usando Description em vez de Fields)
     let fullDescription = "**⏳ PRÓXIMOS RESPAWNS**\n";
     
     if (active.length > 0) {
@@ -66,7 +65,8 @@ async function sendFullReportToDiscord() {
 
     fullDescription += "\n**⚪ SEM INFORMAÇÃO**\n";
     if (available.length > 0) {
-        fullDescription += available.map(b => b.name + ' (' + b.typeLabel + ' - ' + b.floor + ')').join(', ');
+        // Ajustado para exibir em lista com bullet points
+        fullDescription += available.map(b => '• ' + b.name + ' (' + b.typeLabel + ' - ' + b.floor + ')').join('\n');
     } else {
         fullDescription += "Nenhum boss disponível.";
     }
@@ -74,7 +74,7 @@ async function sendFullReportToDiscord() {
     const payload = {
         embeds: [{
             title: "⚔️ STATUS DOS BOSSES - LEGEND OF YMIR",
-            description: fullDescription.substring(0, 4000), // Limite maior para o corpo da mensagem
+            description: fullDescription.substring(0, 4000),
             color: 5814783,
             footer: { text: 'Enviado por: ' + (currentUser ? currentUser.displayName : 'Sistema') },
             timestamp: new Date().toISOString()
@@ -100,7 +100,6 @@ async function sendFullReportToDiscord() {
     }
 }
 
-// RESTANTE DAS FUNÇÕES (IGUAL AO ORIGINAL)
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
     const container = document.getElementById('boss-list-container');
