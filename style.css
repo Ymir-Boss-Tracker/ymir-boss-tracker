@@ -8,12 +8,13 @@ body {
     padding-bottom: 50px; 
 }
 
+/* AJUSTE DO BANNER PARA MOSTRAR OS ROSTOS */
 header.main-banner { 
     position: relative;
     background-image: url('https://assets.repress.co.kr/photos/a36258edead972038e83cc022955d0fd/original.png');
     background-size: cover;
-    background-position: center 30%;
-    min-height: 250px;
+    background-position: center 15%; /* Ajustado de 30% para 15% para subir a imagem e focar nos rostos */
+    min-height: 300px; /* Aumentado para 300px para melhorar o enquadramento */
     display: flex;
     align-items: center; justify-content: center;
     border-bottom: 3px solid #d4af37;
@@ -22,7 +23,7 @@ header.main-banner {
 .banner-overlay {
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: linear-gradient(to bottom, rgba(0,0,0,0.2), rgba(0,0,0,0.8));
+    background: linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.8));
     display: flex; align-items: center; justify-content: center;
 }
 
@@ -42,7 +43,8 @@ header.main-banner {
 }
 
 .boss-header { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 10px; }
-/* FOCO NO ROSTO */
+
+/* MINIATURAS DOS BOSSES - FOCO NO ROSTO */
 .boss-thumb { 
     width: 50px; 
     height: 50px; 
@@ -90,11 +92,6 @@ button { cursor: pointer; border-radius: 4px; border: none; font-weight: bold; t
 
 .global-actions { margin: 40px auto; max-width: 450px; display: flex; flex-direction: column; gap: 10px; padding: 0 20px; }
 .reset-all-button { background: #c0392b; color: #fff; padding: 12px; }
-
-/* REGRAS PARA O PRINT */
-.printing .kill-btn, .printing .manual-box, .printing .reset-btn, .printing .view-toggle-container, 
-.printing .global-actions, .printing header, .printing footer { display: none !important; }
-.printing .boss-card { border: 1px solid #d4af37; background: #1a1a1a !important; }
 
 @keyframes pulse { from { box-shadow: 0 0 4px #e74c3c; } to { box-shadow: 0 0 12px #e74c3c; } }
 @media (max-width: 1100px) { .boss-grid { grid-template-columns: repeat(2, 1fr); } }
