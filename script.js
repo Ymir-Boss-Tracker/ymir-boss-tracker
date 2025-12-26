@@ -24,7 +24,6 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// Alternar Visão
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
     const container = document.getElementById('boss-list-container');
@@ -158,7 +157,8 @@ function updateBossTimers() {
                 if (!timerTxt || !bar) return;
 
                 if (boss.respawnTime === 0 || boss.respawnTime <= now) {
-                    timerTxt.textContent = "VIVO";
+                    boss.respawnTime = 0;
+                    timerTxt.textContent = "DISPONÍVEL!";
                     timerTxt.style.color = "#2ecc71";
                     bar.style.width = "100%";
                     bar.style.backgroundColor = "#2ecc71";
@@ -212,12 +212,12 @@ function render() {
                 floorHtml += `
                     <div class="boss-card" id="card-${boss.id}">
                         <h4>${boss.name}</h4>
-                        <div class="timer" id="timer-${boss.id}">VIVO</div>
+                        <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
                         <div class="boss-progress-container"><div class="boss-progress-bar" id="bar-${boss.id}"></div></div>
-                        <div class="static-times"><p>M: <span>${mStr}</span></p><p>N: <span>${nStr}</span></p></div>
-                        <button class="kill-btn" onclick="killBoss('${boss.id}')">KILL</button>
+                        <div class="static-times"><p>Morto: <span>${mStr}</span></p><p>Nasce: <span>${nStr}</span></p></div>
+                        <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
                         <div class="manual-box"><input type="time" id="manual-input-${boss.id}" step="1"><button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button></div>
-                        <button class="reset-btn" onclick="resetBoss('${boss.id}')">Reset</button>
+                        <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
                     </div>`;
             });
             floorDiv.innerHTML = floorHtml + `</div>`;
@@ -230,13 +230,17 @@ function render() {
 }
 
 function exportReport() {
+    const agora = new Date();
     let all = [];
     ['Comum', 'Universal'].forEach(t => { for(const f in BOSS_DATA[t].floors) BOSS_DATA[t].floors[f].bosses.forEach(b => all.push({...b})); });
     let active = all.filter(b => b.respawnTime > 0).sort((a,b) => a.respawnTime - b.respawnTime);
-    let text = `=== RELATÓRIO YMIR ===\n\n`;
+    let text = `=== RELATÓRIO CRONOLÓGICO YMIR (${agora.toLocaleDateString()} ${agora.toLocaleTimeString()}) ===\n\n`;
+    text += `>>> PRÓXIMOS RESPAWNS <<<\n\n`;
     active.forEach(b => {
+        const dur = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
         const n = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
-        text += `${b.type} ${b.floor} ${b.name} -> NASCE: ${n}\n\n`;
+        const m = new Date(b.respawnTime - dur).toLocaleTimeString('pt-BR');
+        text += `${(b.type.substring(0,3) + " " + b.floor + " " + b.name).padEnd(25)} | M: ${m} | NASCE: ${n}\n\n`;
     });
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
