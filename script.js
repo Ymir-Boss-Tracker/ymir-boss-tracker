@@ -33,7 +33,6 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// FUNÇÃO DE ENVIO REFEITA DO ZERO PARA EVITAR ERRO 400
 async function sendFullReportToDiscord() {
     if (!DISCORD_WEBHOOK_URL) return;
     const btn = document.getElementById('sync-discord-btn');
@@ -45,7 +44,7 @@ async function sendFullReportToDiscord() {
     ['Comum', 'Universal'].forEach(type => {
         for (const f in BOSS_DATA[type].floors) {
             BOSS_DATA[type].floors[f].bosses.forEach(b => { 
-                allBosses.push({ ...b }); 
+                allBosses.push({ ...b, typeLabel: type }); 
             });
         }
     });
@@ -53,14 +52,15 @@ async function sendFullReportToDiscord() {
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     const available = allBosses.filter(b => b.respawnTime === 0);
 
-    // Formatação ultra-segura para o Discord
+    // Formatação corrigida: Inclui tipo (Comum/Univ) e remove erros de template string
     const nextRespawnsText = active.length > 0 
-        ? active.map(b => `• **${b.name}** (${b.floor}) -> \`${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\``).join('\n')
+        ? active.map(b => `• **${b.name}** (${b.typeLabel} - ${b.floor}) -> \`${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\``).join('\n')
         : "Nenhum no momento.";
 
+    // Alterado para "SEM INFORMAÇÃO" conforme pedido
     const availableText = available.length > 0
-        ? available.map(b => `${b.name} (${b.floor})`).join(', ')
-        : "Nenhum disponível.";
+        ? available.map(b => `${b.name} (${b.typeLabel} - ${b.floor})`).join(', ')
+        : "Nenhum boss disponível.";
 
     const payload = {
         content: null,
@@ -68,8 +68,8 @@ async function sendFullReportToDiscord() {
             title: "⚔️ STATUS DOS BOSSES - LEGEND OF YMIR",
             color: 5814783,
             fields: [
-                { name: "⏳ PRÓXIMOS RESPAWNS", value: nextRespawnsText.substring(0, 1000) },
-                { name: "🟢 DISPONÍVEIS AGORA", value: availableText.substring(0, 1000) }
+                { name: "⏳ PRÓXIMOS RESPAWNS", value: nextRespawnsText.substring(0, 1024) },
+                { name: "⚪ SEM INFORMAÇÃO", value: availableText.substring(0, 1024) }
             ],
             footer: { text: `Enviado por: ${currentUser ? currentUser.displayName : 'Sistema'}` },
             timestamp: new Date().toISOString()
@@ -86,12 +86,9 @@ async function sendFullReportToDiscord() {
         if (response.ok) {
             btn.textContent = "✅ Sincronizado!";
         } else {
-            const errorData = await response.json();
-            console.error("Erro Discord:", errorData);
             btn.textContent = "❌ Erro 400";
         }
     } catch (err) {
-        console.error("Erro de Conexão:", err);
         btn.textContent = "❌ Erro Rede";
     } finally {
         setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000);
@@ -314,7 +311,7 @@ function exportReport() {
     let allBosses = [];
     ['Comum', 'Universal'].forEach(type => {
         for (const f in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b }); });
+            BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b, typeLabel: type }); });
         }
     });
 
@@ -324,10 +321,10 @@ function exportReport() {
     let text = `⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️\n\n`;
     text += `⏳ PRÓXIMOS RESPAWNS:\n`;
     active.forEach(b => {
-        text += `${b.floor} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\n`;
+        text += `${b.typeLabel} - ${b.floor} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\n`;
     });
-    text += `\n✅ DISPONÍVEIS:\n`;
-    available.forEach(b => { text += `${b.floor} - ${b.name}\n`; });
+    text += `\n⚪ SEM INFORMAÇÃO:\n`;
+    available.forEach(b => { text += `${b.typeLabel} - ${b.floor} - ${b.name}\n`; });
 
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
