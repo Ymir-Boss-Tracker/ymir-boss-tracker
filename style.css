@@ -34,7 +34,7 @@ header.main-banner {
 .type-section { background: rgba(45, 52, 54, 0.3); margin: 20px; padding: 15px; border-radius: 12px; border: 1px solid #3d3d3d; }
 .floors-container { display: grid; grid-template-columns: 1fr; gap: 20px; max-width: 1400px; margin: 0 auto; }
 .floor-section { background: #161b22; padding: 15px; border-radius: 8px; border: 1px solid #30363d; }
-.floor-section h3 { color: #f39c12; text-align: left; padding-left: 10px; border-bottom: 1px solid #30363d; }
+.floor-section h3 { color: #f39c12; text-align: left; padding-left: 10px; border-bottom: 1px solid #30363d; margin-top: 0; }
 
 .boss-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
 
@@ -71,9 +71,25 @@ button { cursor: pointer; border-radius: 4px; border: none; font-weight: bold; t
 .compact-mode .static-times { display: flex; gap: 10px; background: none; margin: 0; }
 .compact-mode .kill-btn, .compact-mode .manual-box, .compact-mode .reset-btn { margin: 0; }
 
-.global-actions { margin: 40px auto; max-width: 400px; display: flex; flex-direction: column; gap: 10px; }
-.export-button { background: #f1c40f; padding: 15px; font-size: 1.1rem; }
+/* EXPORTAÇÃO */
+.export-group { display: flex; gap: 10px; width: 100%; }
+.export-button { background: #f1c40f; color: #000; flex: 1; padding: 15px; font-size: 1rem; }
+.export-img-button { background: #3498db; color: #fff; flex: 1; padding: 15px; font-size: 1rem; }
+
+.global-actions { margin: 40px auto; max-width: 450px; display: flex; flex-direction: column; gap: 10px; padding: 0 20px; }
 .reset-all-button { background: #c0392b; color: #fff; padding: 12px; }
+
+/* REGRAS PARA O PRINT */
+.printing .kill-btn, 
+.printing .manual-box, 
+.printing .reset-btn,
+.printing .view-toggle-container,
+.printing .global-actions,
+.printing header,
+.printing footer {
+    display: none !important;
+}
+.printing .boss-card { border: 1px solid #d4af37; background: #1a1a1a !important; }
 
 @keyframes pulse { from { box-shadow: 0 0 4px #e74c3c; } to { box-shadow: 0 0 12px #e74c3c; } }
 @media (max-width: 1100px) { .boss-grid { grid-template-columns: repeat(2, 1fr); } }
