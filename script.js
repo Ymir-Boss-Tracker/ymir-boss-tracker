@@ -34,22 +34,41 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// FUNÇÃO PARA ENVIAR ALERTA AO DISCORD
-async function sendDiscordAlert(boss, mortoTime, nasceTime) {
+// NOVA FUNÇÃO: ENVIA RELATÓRIO COMPLETO PARA O DISCORD
+async function sendFullReportToDiscord() {
     if (!DISCORD_WEBHOOK_URL) return;
+
+    const agora = new Date();
+    let allBosses = [];
+
+    ['Comum', 'Universal'].forEach(type => {
+        for (const f in BOSS_DATA[type].floors) {
+            BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b }); });
+        }
+    });
+
+    const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
+    const available = allBosses.filter(b => b.respawnTime === 0);
+
+    let nextRespawnsText = active.length > 0 
+        ? active.map(b => `• **${b.name}** (${b.floor} ${b.type.substring(0,3)}) - Nasce às: \`${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\``).join('\n')
+        : "Nenhum boss em contagem.";
+
+    let availableText = available.length > 0
+        ? available.map(b => `✅ ${b.name} (${b.floor} ${b.type.substring(0,3)})`).join(', ')
+        : "Nenhum boss disponível.";
 
     const payload = {
         embeds: [{
-            title: `⚔️ BOSS DERROTADO: ${boss.name}`,
-            color: boss.type === 'Universal' ? 10181046 : 15844367, 
+            title: "⚔️ STATUS ATUAL DOS BOSSES - YMIR",
+            description: `Relatório gerado por: **${currentUser.displayName}**`,
+            color: 3447003, // Azul
             fields: [
-                { name: "📍 Local", value: `${boss.type} - ${boss.floor}`, inline: true },
-                { name: "👤 Killer", value: currentUser ? currentUser.displayName : "Desconhecido", inline: true },
-                { name: "💀 Morto às", value: mortoTime, inline: true },
-                { name: "⏳ Próximo Respawn", value: `**${nasceTime}**`, inline: true }
+                { name: "⏳ PRÓXIMOS RESPAWNS", value: nextRespawnsText },
+                { name: "🟢 DISPONÍVEIS AGORA", value: availableText }
             ],
-            footer: { text: "Ymir Boss Tracker • Atualização em Tempo Real" },
-            timestamp: new Date().toISOString()
+            footer: { text: "Atualizado via Ymir Tracker" },
+            timestamp: agora.toISOString()
         }]
     };
 
@@ -59,10 +78,15 @@ async function sendDiscordAlert(boss, mortoTime, nasceTime) {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
+        alert("Relatório enviado para o Discord com sucesso!");
     } catch (err) {
-        console.error("Erro ao enviar para Discord:", err);
+        console.error("Erro ao enviar:", err);
+        alert("Erro ao enviar para o Discord.");
     }
 }
+
+// REMOVIDA a chamada automática de 'sendDiscordAlert' nas funções de kill
+// Agora as atualizações são apenas locais/Firebase até que você clique no botão.
 
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
@@ -79,7 +103,13 @@ document.getElementById('toggle-view-btn').onclick = () => {
 
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
-document.getElementById('export-btn').onclick = () => exportReport();
+
+// ATUALIZADO: O botão de exportar TXT agora também envia para o Discord
+document.getElementById('export-btn').onclick = () => {
+    exportReport(); // Mantém o download do TXT para você
+    sendFullReportToDiscord(); // Envia o relatório formatado para o Discord
+};
+
 document.getElementById('export-img-btn').onclick = () => exportImage();
 document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
 
@@ -152,14 +182,9 @@ function findBossById(id) {
 
 window.killBoss = (id) => {
     const b = findBossById(id);
-    const now = Date.now();
     const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = now + duration;
+    b.respawnTime = Date.now() + duration;
     b.alerted = false;
-    
-    // Alerta Discord
-    sendDiscordAlert(b, new Date(now).toLocaleTimeString('pt-BR'), new Date(b.respawnTime).toLocaleTimeString('pt-BR'));
-    
     save();
     render();
 };
@@ -174,10 +199,6 @@ window.setManualTime = (id) => {
     const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
     b.respawnTime = d.getTime() + duration;
     b.alerted = false;
-    
-    // Alerta Discord para manual
-    sendDiscordAlert(b, new Date(d.getTime()).toLocaleTimeString('pt-BR'), new Date(b.respawnTime).toLocaleTimeString('pt-BR'));
-    
     save();
     render();
 };
@@ -355,7 +376,7 @@ function exportReport() {
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Relatorio_Discord_Ymir.txt`;
+    link.download = `Relatorio_Ymir.txt`;
     link.click();
 }
 
