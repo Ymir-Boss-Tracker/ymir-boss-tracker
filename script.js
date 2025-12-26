@@ -52,18 +52,19 @@ async function sendFullReportToDiscord() {
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     const available = allBosses.filter(b => b.respawnTime === 0);
 
-    // Formatação corrigida: Inclui tipo (Comum/Univ) e remove erros de template string
+    // Formatação segura: Usamos crases apenas em volta do horário e garantimos que a string não quebre
     const nextRespawnsText = active.length > 0 
-        ? active.map(b => `• **${b.name}** (${b.typeLabel} - ${b.floor}) -> \`${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}\``).join('\n')
+        ? active.map(b => {
+            const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
+            return `• **${b.name}** (${b.typeLabel} - ${b.floor}) -> \`${timeStr}\``;
+        }).join('\n')
         : "Nenhum no momento.";
 
-    // Alterado para "SEM INFORMAÇÃO" conforme pedido
     const availableText = available.length > 0
         ? available.map(b => `${b.name} (${b.typeLabel} - ${b.floor})`).join(', ')
         : "Nenhum boss disponível.";
 
     const payload = {
-        content: null,
         embeds: [{
             title: "⚔️ STATUS DOS BOSSES - LEGEND OF YMIR",
             color: 5814783,
