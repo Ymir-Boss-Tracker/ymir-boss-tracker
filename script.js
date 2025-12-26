@@ -22,8 +22,22 @@ const FIVE_MINUTES_MS = 5 * 60 * 1000;
 const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
 let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal': { name: 'Folkvangr Universal', floors: {} } };
 let currentUser = null;
+let isCompactView = false;
 
-// ... (botões e auth permanecem iguais) ...
+// Alternar Visão
+document.getElementById('toggle-view-btn').onclick = () => {
+    isCompactView = !isCompactView;
+    const container = document.getElementById('boss-list-container');
+    const btn = document.getElementById('toggle-view-btn');
+    if (isCompactView) {
+        container.classList.add('compact-mode');
+        btn.textContent = "🎴 Alternar para Modo Cards";
+    } else {
+        container.classList.remove('compact-mode');
+        btn.textContent = "📱 Alternar para Modo Compacto";
+    }
+};
+
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 document.getElementById('export-btn').onclick = () => exportReport();
@@ -105,15 +119,12 @@ window.killBoss = (id) => {
 
 window.setManualTime = (id) => {
     const val = document.getElementById(`manual-input-${id}`).value;
-    if (!val) return alert("Selecione um horário completo (HH:MM:SS)!");
+    if (!val) return alert("Selecione o horário!");
     const parts = val.split(':').map(Number);
-    const h = parts[0], m = parts[1], s = parts[2] || 0;
-    const d = new Date(); 
-    d.setHours(h, m, s, 0);
+    const d = new Date(); d.setHours(parts[0], parts[1], parts[2] || 0, 0);
     if (d > new Date()) d.setDate(d.getDate() - 1);
     const b = findBossById(id);
-    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = d.getTime() + duration;
+    b.respawnTime = d.getTime() + (id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS);
     b.alerted = false;
     save();
     render();
@@ -127,16 +138,13 @@ window.resetBoss = (id) => {
 };
 
 window.resetAllTimers = async () => {
-    if (!confirm("⚠️ Deseja resetar TODOS os timers agora?")) return;
+    if (!confirm("Resetar tudo?")) return;
     ['Comum', 'Universal'].forEach(type => {
         for (const f in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[f].bosses.forEach(boss => {
-                boss.respawnTime = 0; boss.alerted = false;
-            });
+            BOSS_DATA[type].floors[f].bosses.forEach(boss => { boss.respawnTime = 0; });
         }
     });
-    await save();
-    render();
+    await save(); render();
 };
 
 function updateBossTimers() {
@@ -147,11 +155,10 @@ function updateBossTimers() {
                 const timerTxt = document.getElementById(`timer-${boss.id}`);
                 const card = document.getElementById(`card-${boss.id}`);
                 const bar = document.getElementById(`bar-${boss.id}`);
-                if (!timerTxt || !card || !bar) return;
+                if (!timerTxt || !bar) return;
 
                 if (boss.respawnTime === 0 || boss.respawnTime <= now) {
-                    boss.respawnTime = 0;
-                    timerTxt.textContent = "DISPONÍVEL!";
+                    timerTxt.textContent = "VIVO";
                     timerTxt.style.color = "#2ecc71";
                     bar.style.width = "100%";
                     bar.style.backgroundColor = "#2ecc71";
@@ -159,8 +166,6 @@ function updateBossTimers() {
                 } else {
                     const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                     const diff = boss.respawnTime - now;
-                    
-                    // Cálculo da porcentagem da barra (Tempo Restante / Duração Total)
                     const percent = (diff / duration) * 100;
                     bar.style.width = `${percent}%`;
 
@@ -169,8 +174,7 @@ function updateBossTimers() {
                         bar.style.backgroundColor = "#ff4d4d";
                         if (!boss.alerted) {
                             document.getElementById('alert-sound').play().catch(() => {});
-                            boss.alerted = true;
-                            save();
+                            boss.alerted = true; save();
                         }
                         card.classList.add('alert');
                     } else {
@@ -178,7 +182,6 @@ function updateBossTimers() {
                         bar.style.backgroundColor = "#f1c40f";
                         card.classList.remove('alert');
                     }
-
                     const h = Math.floor(diff / 3600000);
                     const m = Math.floor((diff % 3600000) / 60000);
                     const s = Math.floor((diff % 60000) / 1000);
@@ -204,70 +207,41 @@ function render() {
             let floorHtml = `<h3>${f}</h3><div class="boss-grid">`;
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-                const mortoStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--:--";
-                const nasceStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--:--";
-
+                const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--";
+                const nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
                 floorHtml += `
                     <div class="boss-card" id="card-${boss.id}">
                         <h4>${boss.name}</h4>
-                        <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
-                        
-                        <div class="boss-progress-container">
-                            <div class="boss-progress-bar" id="bar-${boss.id}"></div>
-                        </div>
-
-                        <div class="static-times">
-                            <p>Morto: <span id="killed-${boss.id}">${mortoStr}</span></p>
-                            <p>Nasce: <span id="spawn-${boss.id}">${nasceStr}</span></p>
-                        </div>
-                        <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
-                        <div class="manual-box">
-                            <input type="time" id="manual-input-${boss.id}" step="1">
-                            <button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button>
-                        </div>
-                        <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
+                        <div class="timer" id="timer-${boss.id}">VIVO</div>
+                        <div class="boss-progress-container"><div class="boss-progress-bar" id="bar-${boss.id}"></div></div>
+                        <div class="static-times"><p>M: <span>${mStr}</span></p><p>N: <span>${nStr}</span></p></div>
+                        <button class="kill-btn" onclick="killBoss('${boss.id}')">KILL</button>
+                        <div class="manual-box"><input type="time" id="manual-input-${boss.id}" step="1"><button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button></div>
+                        <button class="reset-btn" onclick="resetBoss('${boss.id}')">Reset</button>
                     </div>`;
             });
-            floorHtml += `</div>`;
-            floorDiv.innerHTML = floorHtml;
+            floorDiv.innerHTML = floorHtml + `</div>`;
             grid.appendChild(floorDiv);
         }
         section.appendChild(grid);
         container.appendChild(section);
     });
+    if (isCompactView) container.classList.add('compact-mode');
 }
 
 function exportReport() {
-    const agora = new Date();
-    let allBosses = [];
-    ['Comum', 'Universal'].forEach(type => {
-        for (const f in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[f].bosses.forEach(b => allBosses.push({...b}));
-        }
-    });
-
-    let active = allBosses.filter(b => b.respawnTime > 0).sort((a,b) => a.respawnTime - b.respawnTime);
-    let inactive = allBosses.filter(b => b.respawnTime === 0);
-
-    let text = `=== RELATÓRIO CRONOLÓGICO YMIR (${agora.toLocaleDateString()} ${agora.toLocaleTimeString()}) ===\n\n`;
-    text += `>>> PRÓXIMOS RESPANS <<<\n\n`;
+    let all = [];
+    ['Comum', 'Universal'].forEach(t => { for(const f in BOSS_DATA[t].floors) BOSS_DATA[t].floors[f].bosses.forEach(b => all.push({...b})); });
+    let active = all.filter(b => b.respawnTime > 0).sort((a,b) => a.respawnTime - b.respawnTime);
+    let text = `=== RELATÓRIO YMIR ===\n\n`;
     active.forEach(b => {
-        const dur = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
         const n = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
-        const m = new Date(b.respawnTime - dur).toLocaleTimeString('pt-BR');
-        text += `${(b.type.substring(0,3) + " " + b.floor + " " + b.name).padEnd(25)} | M: ${m} | NASCE: ${n}\n\n`;
+        text += `${b.type} ${b.floor} ${b.name} -> NASCE: ${n}\n\n`;
     });
-    
-    text += `\n==============================================\n`;
-    text += `>>> BOSSES DISPONÍVEIS <<<\n\n`;
-    inactive.forEach(b => {
-        text += `[${b.type}] ${b.floor} - ${b.name}\n\n`;
-    });
-
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.download = `Relatorio_Ymir_Cronologico.txt`;
+    link.download = `Relatorio_Ymir.txt`;
     link.click();
 }
 
