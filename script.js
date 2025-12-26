@@ -33,6 +33,7 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
+// FUNÇÃO DE ENVIO CORRIGIDA (DIVISÃO POR CAMPOS)
 async function sendFullReportToDiscord() {
     if (!DISCORD_WEBHOOK_URL) return;
     const btn = document.getElementById('sync-discord-btn');
@@ -52,32 +53,42 @@ async function sendFullReportToDiscord() {
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     const available = allBosses.filter(b => b.respawnTime === 0);
 
-    // Formatação SEM CRASES para evitar erros no Discord
-    let nextRespawnsText = "";
+    const embedFields = [];
+
+    // Lógica para Próximos Respawns (com divisão se exceder 1024 caracteres)
     if (active.length > 0) {
-        nextRespawnsText = active.map(b => {
+        let currentText = "";
+        let fieldCount = 1;
+        
+        active.forEach(b => {
             const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
-            return '• **' + b.name + '** (' + b.typeLabel + ' - ' + b.floor + ') -> **' + timeStr + '**';
-        }).join('\n');
-    } else {
-        nextRespawnsText = "Nenhum no momento.";
+            const line = '• **' + b.name + '** (' + b.typeLabel + ' - ' + b.floor + ') -> **' + timeStr + '**\n';
+            
+            if ((currentText + line).length > 1000) {
+                embedFields.push({ name: "⏳ PRÓXIMOS RESPAWNS (Parte " + fieldCount + ")", value: currentText });
+                currentText = line;
+                fieldCount++;
+            } else {
+                currentText += line;
+            }
+        });
+        embedFields.push({ name: fieldCount > 1 ? "⏳ PRÓXIMOS RESPAWNS (Final)" : "⏳ PRÓXIMOS RESPAWNS", value: currentText });
     }
 
-    let availableText = "";
+    // Lógica para Sem Informação
     if (available.length > 0) {
-        availableText = available.map(b => b.name + ' (' + b.typeLabel + ' - ' + b.floor + ')').join(', ');
-    } else {
-        availableText = "Nenhum boss disponível.";
+        let availText = available.map(b => b.name + ' (' + b.typeLabel + ' - ' + b.floor + ')').join(', ');
+        if (availText.length > 1024) {
+            availText = availText.substring(0, 1021) + "...";
+        }
+        embedFields.push({ name: "⚪ SEM INFORMAÇÃO", value: availText });
     }
 
     const payload = {
         embeds: [{
             title: "⚔️ STATUS DOS BOSSES - LEGEND OF YMIR",
             color: 5814783,
-            fields: [
-                { name: "⏳ PRÓXIMOS RESPAWNS", value: nextRespawnsText.substring(0, 1024) },
-                { name: "⚪ SEM INFORMAÇÃO", value: availableText.substring(0, 1024) }
-            ],
+            fields: embedFields,
             footer: { text: 'Enviado por: ' + (currentUser ? currentUser.displayName : 'Sistema') },
             timestamp: new Date().toISOString()
         }]
@@ -102,6 +113,7 @@ async function sendFullReportToDiscord() {
     }
 }
 
+// RESTANTE DO CÓDIGO (Igual ao original)
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
     const container = document.getElementById('boss-list-container');
