@@ -33,7 +33,6 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// Eventos da UI
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
     document.getElementById('toggle-view-btn').textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
@@ -243,7 +242,10 @@ function render() {
                             <p class="label-nasce">Nasce: <span>${nStr}</span></p>
                         </div>
                         <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
-                        <div class="manual-box"><input type="time" id="manual-input-${boss.id}" step="1"><button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button></div>
+                        <div class="manual-box">
+                            <input type="time" id="manual-input-${boss.id}" step="1">
+                            <button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button>
+                        </div>
                         <div class="action-footer">
                             <button class="undo-btn" onclick="undoKill('${boss.id}')">↩ Desfazer</button>
                             <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
@@ -273,8 +275,6 @@ async function sendFullReportToDiscord() {
     });
 
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
-    const available = allBosses.filter(b => b.respawnTime === 0);
-
     let fullDescription = "**⏳ PRÓXIMOS RESPAWNS**\n";
     if (active.length > 0) {
         active.forEach(b => {
