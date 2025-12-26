@@ -42,7 +42,9 @@ document.getElementById('toggle-view-btn').onclick = () => {
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 document.getElementById('export-btn').onclick = () => exportReport();
-document.getElementById('sync-discord-btn').onclick = () => sendFullReportToDiscord();
+// Novos Listeners para os botões separados do Discord
+document.getElementById('sync-comum-btn').onclick = () => sendReportToDiscord('Comum');
+document.getElementById('sync-universal-btn').onclick = () => sendReportToDiscord('Universal');
 document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
 
 onAuthStateChanged(auth, (user) => {
@@ -197,7 +199,7 @@ function updateBossTimers() {
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 const timerTxt = document.getElementById('timer-' + boss.id);
                 const bar = document.getElementById('bar-' + boss.id);
-                const card = document.getElementById('card-' + boss.id); // Captura o card para o alerta visual
+                const card = document.getElementById('card-' + boss.id); // Captura o elemento do card
                 if (!timerTxt || !bar || !card) return;
 
                 if (boss.respawnTime === 0 || boss.respawnTime <= now) {
@@ -206,7 +208,7 @@ function updateBossTimers() {
                     timerTxt.style.color = "#2ecc71";
                     bar.style.width = "100%";
                     bar.style.backgroundColor = "#2ecc71";
-                    card.classList.remove('alert');
+                    card.classList.remove('alert'); // Remove borda de alerta
                 } else {
                     const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                     const diff = boss.respawnTime - now;
@@ -216,7 +218,7 @@ function updateBossTimers() {
                     if (diff <= FIVE_MINUTES_MS) {
                         timerTxt.style.color = "#ff4d4d";
                         bar.style.backgroundColor = "#ff4d4d";
-                        card.classList.add('alert'); // Adiciona borda vermelha
+                        card.classList.add('alert'); // Adiciona borda de alerta (CSS)
                         if (!boss.alerted) {
                             document.getElementById('alert-sound').play().catch(() => {});
                             boss.alerted = true; save();
@@ -224,7 +226,8 @@ function updateBossTimers() {
                     } else {
                         timerTxt.style.color = "#f1c40f";
                         bar.style.backgroundColor = "#f1c40f";
-                        card.classList.remove('alert'); // Remove se estiver longe do respawn
+                        card.classList.remove('alert');
+                        boss.alerted = false;
                     }
                     const h = Math.floor(diff / 3600000).toString().padStart(2,'0');
                     const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0');
@@ -287,33 +290,35 @@ function render() {
     });
 }
 
-async function sendFullReportToDiscord() {
+// FUNÇÃO DE DISCORD ATUALIZADA (FILTRADA)
+async function sendReportToDiscord(filterType) {
     if (!DISCORD_WEBHOOK_URL) return;
-    const btn = document.getElementById('sync-discord-btn');
+    const btnId = filterType === 'Comum' ? 'sync-comum-btn' : 'sync-universal-btn';
+    const btn = document.getElementById(btnId);
     const originalText = btn.textContent;
-    btn.textContent = "⌛ Enviando...";
+    btn.textContent = "⌛...";
     btn.disabled = true;
 
-    let allBosses = [];
-    ['Comum', 'Universal'].forEach(type => {
-        for (const f in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b, typeLabel: type }); });
-        }
-    });
+    let filtered = [];
+    for (const f in BOSS_DATA[filterType].floors) {
+        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
+            filtered.push({ ...b, typeLabel: filterType }); 
+        });
+    }
 
-    const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
-    let desc = "**⏳ PRÓXIMOS RESPAWNS**\n";
+    const active = filtered.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
+    let desc = `**⏳ PRÓXIMOS RESPAWNS (${filterType.toUpperCase()})**\n`;
     if (active.length > 0) {
         active.forEach(b => {
-            desc += `• **${b.name}** (${b.typeLabel} - ${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**\n`;
+            desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**\n`;
         });
     } else { desc += "Nenhum no momento.\n"; }
 
     const payload = {
         embeds: [{
-            title: "⚔️ STATUS DOS BOSSES - LEGEND OF YMIR",
+            title: `⚔️ STATUS ${filterType.toUpperCase()} - LEGEND OF YMIR`,
             description: desc.substring(0, 4000),
-            color: 5814783,
+            color: filterType === 'Comum' ? 3066993 : 5814783, // Verde para comum, azul para universal
             footer: { text: 'Enviado por: ' + (currentUser ? currentUser.displayName : 'Sistema') },
             timestamp: new Date().toISOString()
         }]
@@ -322,7 +327,7 @@ async function sendFullReportToDiscord() {
     try {
         const response = await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         btn.textContent = response.ok ? "✅ Sincronizado!" : "❌ Erro";
-    } catch (err) { btn.textContent = "❌ Erro Rede"; }
+    } catch (err) { btn.textContent = "❌ Erro"; }
     finally { setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000); }
 }
 
