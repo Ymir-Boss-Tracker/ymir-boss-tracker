@@ -22,7 +22,7 @@ const BOSS_IMAGES = {
     "Berserker": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674395545-53214fcd-e6aa-41e5-b91d-ba44ee3bd3f3.png",
     "Mage": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674409406-c5b70062-7ad2-4958-9a5c-3d2b2a2edcb6.png",
     "Skald": "https://framerusercontent.com/images/XJzkQNlvMBB6ZOBgb6DUs5u1Mgk.png?width=1000&height=2280",
-    "Lancer": "" 
+    "Lancer": "" // Sem link conforme pedido
 };
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
@@ -33,7 +33,6 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// Função para enviar relatório ao Discord
 async function sendFullReportToDiscord() {
     if (!DISCORD_WEBHOOK_URL) return;
     const btn = document.getElementById('sync-discord-btn');
@@ -81,11 +80,7 @@ async function sendFullReportToDiscord() {
     };
 
     try {
-        const response = await fetch(DISCORD_WEBHOOK_URL, { 
-            method: 'POST', 
-            headers: { 'Content-Type': 'application/json' }, 
-            body: JSON.stringify(payload) 
-        });
+        const response = await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
         btn.textContent = response.ok ? "✅ Sincronizado!" : "❌ Erro 400";
     } catch (err) {
         btn.textContent = "❌ Erro Rede";
@@ -94,12 +89,11 @@ async function sendFullReportToDiscord() {
     }
 }
 
-// Alternar entre modo compacto e cards
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
     const btn = document.getElementById('toggle-view-btn');
     btn.textContent = isCompactView ? "🎴 Alternar para Modo Cards" : "📱 Alternar para Modo Compacto";
-    render(); // Re-renderiza para aplicar a classe correta
+    render();
 };
 
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
@@ -266,12 +260,8 @@ function render() {
     const container = document.getElementById('boss-list-container');
     container.innerHTML = '';
     
-    // Aplica ou remove a classe ANTES de renderizar os itens
-    if (isCompactView) {
-        container.classList.add('compact-mode');
-    } else {
-        container.classList.remove('compact-mode');
-    }
+    if (isCompactView) { container.classList.add('compact-mode'); } 
+    else { container.classList.remove('compact-mode'); }
 
     ['Comum', 'Universal'].forEach(type => {
         const section = document.createElement('section');
@@ -288,11 +278,13 @@ function render() {
                 const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--";
                 const nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
                 
-                const bossImgHtml = boss.image ? `<img src="${boss.image}" class="boss-thumb" alt="${boss.name}">` : '';
+                const bossImgHtml = boss.image 
+                    ? `<img src="${boss.image}" class="boss-thumb" alt="${boss.name}">` 
+                    : `<div class="boss-thumb" style="border-style: dashed; opacity: 0.3;"></div>`;
 
                 floorHtml += `<div class="boss-card" id="card-${boss.id}">
                         <div class="boss-header">
-                            ${bossImgHtml}
+                            <div class="thumb-container">${bossImgHtml}</div>
                             <h4>${boss.name}</h4>
                         </div>
                         <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
@@ -318,18 +310,9 @@ function exportReport() {
             BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b, typeLabel: type }); });
         }
     });
-
     const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     const available = allBosses.filter(b => b.respawnTime === 0);
-
-    let text = "⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️\n\n";
-    text += "⏳ PRÓXIMOS RESPAWNS:\n";
-    active.forEach(b => {
-        text += b.typeLabel + " - " + b.floor + " - " + b.name + ": " + new Date(b.respawnTime).toLocaleTimeString('pt-BR') + "\n";
-    });
-    text += "\n⚪ SEM INFORMAÇÃO:\n";
-    available.forEach(b => { text += b.typeLabel + " - " + b.floor + " - " + b.name + "\n"; });
-
+    let text = "⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️\n\n⏳ PRÓXIMOS RESPAWNS:\n" + active.map(b => b.typeLabel + " - " + b.floor + " - " + b.name + ": " + new Date(b.respawnTime).toLocaleTimeString('pt-BR')).join('\n') + "\n\n⚪ SEM INFORMAÇÃO:\n" + available.map(b => b.typeLabel + " - " + b.floor + " - " + b.name).join('\n');
     const blob = new Blob([text], { type: 'text/plain' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
