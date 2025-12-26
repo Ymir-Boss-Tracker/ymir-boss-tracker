@@ -41,7 +41,6 @@ header.main-banner {
     padding: 15px; border-radius: 6px; border-left: 4px solid #d4af37;
 }
 
-/* ALTERAÇÃO: Foco no rosto */
 .boss-header { display: flex; align-items: center; gap: 12px; justify-content: center; margin-bottom: 10px; }
 .boss-thumb { 
     width: 50px; 
