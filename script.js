@@ -23,6 +23,7 @@ const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
 let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal': { name: 'Folkvangr Universal', floors: {} } };
 let currentUser = null;
 
+// ... (botões e auth permanecem iguais) ...
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 document.getElementById('export-btn').onclick = () => exportReport();
@@ -145,18 +146,27 @@ function updateBossTimers() {
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 const timerTxt = document.getElementById(`timer-${boss.id}`);
                 const card = document.getElementById(`card-${boss.id}`);
-                if (!timerTxt || !card) return;
+                const bar = document.getElementById(`bar-${boss.id}`);
+                if (!timerTxt || !card || !bar) return;
 
                 if (boss.respawnTime === 0 || boss.respawnTime <= now) {
                     boss.respawnTime = 0;
                     timerTxt.textContent = "DISPONÍVEL!";
-                    timerTxt.style.color = "#2ecc71"; // VERDE para disponível
+                    timerTxt.style.color = "#2ecc71";
+                    bar.style.width = "100%";
+                    bar.style.backgroundColor = "#2ecc71";
                     card.classList.remove('alert');
                 } else {
+                    const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                     const diff = boss.respawnTime - now;
                     
+                    // Cálculo da porcentagem da barra (Tempo Restante / Duração Total)
+                    const percent = (diff / duration) * 100;
+                    bar.style.width = `${percent}%`;
+
                     if (diff <= FIVE_MINUTES_MS) {
-                        timerTxt.style.color = "#ff4d4d"; // VERMELHO faltando 5min
+                        timerTxt.style.color = "#ff4d4d";
+                        bar.style.backgroundColor = "#ff4d4d";
                         if (!boss.alerted) {
                             document.getElementById('alert-sound').play().catch(() => {});
                             boss.alerted = true;
@@ -164,7 +174,8 @@ function updateBossTimers() {
                         }
                         card.classList.add('alert');
                     } else {
-                        timerTxt.style.color = "#f1c40f"; // AMARELO em andamento
+                        timerTxt.style.color = "#f1c40f";
+                        bar.style.backgroundColor = "#f1c40f";
                         card.classList.remove('alert');
                     }
 
@@ -200,6 +211,11 @@ function render() {
                     <div class="boss-card" id="card-${boss.id}">
                         <h4>${boss.name}</h4>
                         <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
+                        
+                        <div class="boss-progress-container">
+                            <div class="boss-progress-bar" id="bar-${boss.id}"></div>
+                        </div>
+
                         <div class="static-times">
                             <p>Morto: <span id="killed-${boss.id}">${mortoStr}</span></p>
                             <p>Nasce: <span id="spawn-${boss.id}">${nasceStr}</span></p>
@@ -239,7 +255,6 @@ function exportReport() {
         const dur = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
         const n = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
         const m = new Date(b.respawnTime - dur).toLocaleTimeString('pt-BR');
-        // Pula uma linha por boss
         text += `${(b.type.substring(0,3) + " " + b.floor + " " + b.name).padEnd(25)} | M: ${m} | NASCE: ${n}\n\n`;
     });
     
