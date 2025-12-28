@@ -133,3 +133,4 @@ header.main-banner {
 /* Ajuste Compacto */
 .compact-mode .boss-card { min-width: 180px; padding: 8px; text-align: center; }
 .compact-mode .boss-thumb, .compact-mode .manual-box, .compact-mode .action-footer { display: none; }
+
