@@ -33,15 +33,21 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// Lógica do botão de alternância
-const toggleBtn = document.getElementById('toggle-view-btn');
-if(toggleBtn) {
-    toggleBtn.onclick = () => {
-        isCompactView = !isCompactView;
-        toggleBtn.textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
-        render();
-    };
-}
+// Função para rolar até o boss específico
+window.scrollToBoss = (id) => {
+    const element = document.getElementById('card-' + id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('highlight-flash');
+        setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+    }
+};
+
+document.getElementById('toggle-view-btn').onclick = () => {
+    isCompactView = !isCompactView;
+    document.getElementById('toggle-view-btn').textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
+    render();
+};
 
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
@@ -136,11 +142,15 @@ function updateNextBossHighlight() {
         const h = Math.floor(diff / 3600000).toString().padStart(2,'0');
         const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0');
         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
+        
+        highlightDiv.setAttribute('onclick', `scrollToBoss('${next.id}')`);
         highlightDiv.innerHTML = `<div class="next-boss-info">
             <span>🎯 PRÓXIMO: <strong>${next.name}</strong> <small>(${next.typeLabel} - ${next.floor})</small></span>
             <span class="next-boss-timer">${h}:${m}:${s}</span>
+            <small style="color: #d4af37; display:block; margin-top:5px;">(Clique para localizar)</small>
         </div>`;
     } else {
+        highlightDiv.removeAttribute('onclick');
         highlightDiv.innerHTML = "<span>⚔️ Nenhum boss em contagem no momento.</span>";
     }
 }
@@ -245,7 +255,6 @@ function updateBossTimers() {
 function render() {
     const container = document.getElementById('boss-list-container');
     container.innerHTML = '';
-    
     const viewClass = isCompactView ? 'compact-mode' : '';
 
     ['Comum', 'Universal'].forEach(type => {
@@ -262,11 +271,7 @@ function render() {
                 const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                 const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--";
                 const nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
-                
-                // No Modo Compacto (isCompactView), a imagem não é gerada
-                const bossImgHtml = !isCompactView 
-                    ? `<div class="thumb-container"><img src="${boss.image}" class="boss-thumb" alt="${boss.name}"></div>` 
-                    : "";
+                const bossImgHtml = !isCompactView ? `<div class="thumb-container"><img src="${boss.image}" class="boss-thumb" alt="${boss.name}"></div>` : "";
 
                 floorHtml += `<div class="boss-card" id="card-${boss.id}">
                         <div class="boss-header">
@@ -305,17 +310,13 @@ async function sendReportToDiscord(filterType) {
 
     let filtered = [];
     for (const f in BOSS_DATA[filterType].floors) {
-        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
-            filtered.push({ ...b, typeLabel: filterType }); 
-        });
+        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { filtered.push({ ...b, typeLabel: filterType }); });
     }
 
     const active = filtered.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
     let desc = `**⏳ PRÓXIMOS RESPAWNS (${filterType.toUpperCase()})**\n`;
     if (active.length > 0) {
-        active.forEach(b => {
-            desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**\n`;
-        });
+        active.forEach(b => { desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**\n`; });
     } else { desc += "Nenhum no momento.\n"; }
 
     const payload = {
