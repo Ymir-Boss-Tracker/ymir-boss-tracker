@@ -22,7 +22,7 @@ const BOSS_IMAGES = {
     "Berserker": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674395545-53214fcd-e6aa-41e5-b91d-ba44ee3bd3f3.png",
     "Mage": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674409406-c5b70062-7ad2-4958-9a5c-3d2b2a2edcb6.png",
     "Skald": "https://framerusercontent.com/images/XJzkQNlvMBB6ZOBgb6DUs5u1Mgk.png?width=1000&height=2280",
-    "Lancer": "" 
+    "Lancer": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674381736-231a4773-4f9e-4e8c-8f91-884814a27572.png" // Adicionado placeholder
 };
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
@@ -33,6 +33,7 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
+// Listeners
 document.getElementById('toggle-view-btn').onclick = () => {
     isCompactView = !isCompactView;
     document.getElementById('toggle-view-btn').textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
@@ -42,7 +43,6 @@ document.getElementById('toggle-view-btn').onclick = () => {
 document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
 document.getElementById('logout-btn').onclick = () => signOut(auth);
 document.getElementById('export-btn').onclick = () => exportReport();
-// Novos Listeners para os botões separados do Discord
 document.getElementById('sync-comum-btn').onclick = () => sendReportToDiscord('Comum');
 document.getElementById('sync-universal-btn').onclick = () => sendReportToDiscord('Universal');
 document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
@@ -134,7 +134,7 @@ function updateNextBossHighlight() {
         const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0');
         const s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
         highlightDiv.innerHTML = `<div class="next-boss-info">
-            <span>🎯 PRÓXIMO: <strong>${next.name}</strong> (${next.typeLabel} - ${next.floor})</span>
+            <span>🎯 PRÓXIMO: <strong>${next.name}</strong> <small>(${next.typeLabel} - ${next.floor})</small></span>
             <span class="next-boss-timer">${h}:${m}:${s}</span>
         </div>`;
     } else {
@@ -199,7 +199,7 @@ function updateBossTimers() {
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 const timerTxt = document.getElementById('timer-' + boss.id);
                 const bar = document.getElementById('bar-' + boss.id);
-                const card = document.getElementById('card-' + boss.id); // Captura o elemento do card
+                const card = document.getElementById('card-' + boss.id);
                 if (!timerTxt || !bar || !card) return;
 
                 if (boss.respawnTime === 0 || boss.respawnTime <= now) {
@@ -208,7 +208,7 @@ function updateBossTimers() {
                     timerTxt.style.color = "#2ecc71";
                     bar.style.width = "100%";
                     bar.style.backgroundColor = "#2ecc71";
-                    card.classList.remove('alert'); // Remove borda de alerta
+                    card.classList.remove('alert');
                 } else {
                     const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                     const diff = boss.respawnTime - now;
@@ -218,7 +218,7 @@ function updateBossTimers() {
                     if (diff <= FIVE_MINUTES_MS) {
                         timerTxt.style.color = "#ff4d4d";
                         bar.style.backgroundColor = "#ff4d4d";
-                        card.classList.add('alert'); // Adiciona borda de alerta (CSS)
+                        card.classList.add('alert');
                         if (!boss.alerted) {
                             document.getElementById('alert-sound').play().catch(() => {});
                             boss.alerted = true; save();
@@ -261,7 +261,7 @@ function render() {
                 const nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
                 const bossImgHtml = boss.image 
                     ? `<img src="${boss.image}" class="boss-thumb" alt="${boss.name}">` 
-                    : `<div class="boss-thumb" style="border-style: dashed; opacity: 0.2;"></div>`;
+                    : `<div class="boss-thumb" style="border-style: dashed; opacity: 0.2; display: flex; align-items: center; justify-content: center;">⚔️</div>`;
 
                 floorHtml += `<div class="boss-card" id="card-${boss.id}">
                         <div class="boss-header">
@@ -290,7 +290,6 @@ function render() {
     });
 }
 
-// FUNÇÃO DE DISCORD ATUALIZADA (FILTRADA)
 async function sendReportToDiscord(filterType) {
     if (!DISCORD_WEBHOOK_URL) return;
     const btnId = filterType === 'Comum' ? 'sync-comum-btn' : 'sync-universal-btn';
@@ -318,7 +317,7 @@ async function sendReportToDiscord(filterType) {
         embeds: [{
             title: `⚔️ STATUS ${filterType.toUpperCase()} - LEGEND OF YMIR`,
             description: desc.substring(0, 4000),
-            color: filterType === 'Comum' ? 3066993 : 5814783, // Verde para comum, azul para universal
+            color: filterType === 'Comum' ? 3066993 : 5814783,
             footer: { text: 'Enviado por: ' + (currentUser ? currentUser.displayName : 'Sistema') },
             timestamp: new Date().toISOString()
         }]
@@ -348,4 +347,3 @@ function exportReport() {
 }
 
 setInterval(() => { if(currentUser) updateBossTimers(); }, 1000);
-
