@@ -22,7 +22,7 @@ const BOSS_IMAGES = {
     "Berserker": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674395545-53214fcd-e6aa-41e5-b91d-ba44ee3bd3f3.png",
     "Mage": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674409406-c5b70062-7ad2-4958-9a5c-3d2b2a2edcb6.png",
     "Skald": "https://framerusercontent.com/images/XJzkQNlvMBB6ZOBgb6DUs5u1Mgk.png?width=1000&height=2280",
-    "Lancer": "https://placehold.co/400x400/000000/000000.png" // Imagem preta para o Lancer
+    "Lancer": "https://placehold.co/400x400/000000/000000.png" 
 };
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
