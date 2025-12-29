@@ -28,6 +28,7 @@ const BOSS_IMAGES = {
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const FIVE_MINUTES_MS = 5 * 1000 * 60;
+const ONE_MINUTE_MS = 1000 * 60; // 60 segundos
 const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
 let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal': { name: 'Folkvangr Universal', floors: {} } };
 let currentUser = null;
@@ -220,17 +221,26 @@ function updateBossTimers() {
                     timerTxt.style.color = "#2ecc71";
                     bar.style.width = "100%";
                     bar.style.backgroundColor = "#2ecc71";
-                    card.classList.remove('alert');
+                    card.classList.remove('alert', 'fire-alert');
                 } else {
                     const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                     const diff = boss.respawnTime - now;
                     const percent = (diff / duration) * 100;
                     bar.style.width = percent + '%';
                     
-                    if (diff <= FIVE_MINUTES_MS) {
+                    // Lógica do Efeito de Fogo (< 1 minuto)
+                    if (diff <= ONE_MINUTE_MS) {
+                        card.classList.add('fire-alert');
+                        card.classList.remove('alert');
+                        timerTxt.style.color = "#ff8c00";
+                        bar.style.backgroundColor = "#ff4500";
+                    } 
+                    // Alerta normal (5 minutos)
+                    else if (diff <= FIVE_MINUTES_MS) {
                         timerTxt.style.color = "#ff4d4d";
                         bar.style.backgroundColor = "#ff4d4d";
                         card.classList.add('alert');
+                        card.classList.remove('fire-alert');
                         if (!boss.alerted) {
                             document.getElementById('alert-sound').play().catch(() => {});
                             boss.alerted = true; save();
@@ -238,9 +248,10 @@ function updateBossTimers() {
                     } else {
                         timerTxt.style.color = "#f1c40f";
                         bar.style.backgroundColor = "#f1c40f";
-                        card.classList.remove('alert');
+                        card.classList.remove('alert', 'fire-alert');
                         boss.alerted = false;
                     }
+
                     const h = Math.floor(diff / 3600000).toString().padStart(2,'0');
                     const m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0');
                     const s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
