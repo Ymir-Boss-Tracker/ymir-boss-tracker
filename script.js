@@ -33,7 +33,6 @@ let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal':
 let currentUser = null;
 let isCompactView = false;
 
-// Função para rolar até o boss específico
 window.scrollToBoss = (id) => {
     const element = document.getElementById('card-' + id);
     if (element) {
@@ -285,7 +284,10 @@ function render() {
                             <p class="label-nasce">Nasce: <span>${nStr}</span></p>
                         </div>
                         <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
-                        <div class="manual-box"><input type="time" id="manual-input-${boss.id}" step="1"><button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button></div>
+                        <div class="manual-box">
+                            <input type="time" id="manual-input-${boss.id}" step="1" onkeydown="if(event.key==='Enter') setManualTime('${boss.id}')">
+                            <button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button>
+                        </div>
                         <div class="action-footer">
                             <button class="undo-btn" onclick="undoKill('${boss.id}')">↩ Desfazer</button>
                             <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
