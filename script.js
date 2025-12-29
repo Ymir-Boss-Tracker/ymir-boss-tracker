@@ -2,8 +2,7 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebas
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-const DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1453986988125458524/dFMLs1p0MGfMB9asjuYErVLdz8r0mcfnSJT1OT_weNbDy9Oux9mm8-3cZwr9pCtRiluI";
-
+// Configuração Firebase
 const firebaseConfig = {
   apiKey: "AIzaSyCjWmsnTIA8hJDw-rJC5iJhPhwbK-U1_YU",
   authDomain: "ymir-boss-tracker.firebaseapp.com",
@@ -18,6 +17,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+// Constantes de Tempo
+const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
+const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const FIVE_MINUTES_MS = 5 * 1000 * 60;
+const ONE_MINUTE_MS = 1000 * 60;
+
+const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
 const BOSS_IMAGES = {
     "Berserker": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674395545-53214fcd-e6aa-41e5-b91d-ba44ee3bd3f3.png",
     "Mage": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674409406-c5b70062-7ad2-4958-9a5c-3d2b2a2edcb6.png",
@@ -25,36 +31,11 @@ const BOSS_IMAGES = {
     "Lancer": "https://placehold.co/400x400/000000/000000.png" 
 };
 
-const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
-const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const FIVE_MINUTES_MS = 5 * 1000 * 60;
-const ONE_MINUTE_MS = 1000 * 60; // 60 segundos
-const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
 let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal': { name: 'Folkvangr Universal', floors: {} } };
 let currentUser = null;
 let isCompactView = false;
 
-window.scrollToBoss = (id) => {
-    const element = document.getElementById('card-' + id);
-    if (element) {
-        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        element.classList.add('highlight-flash');
-        setTimeout(() => element.classList.remove('highlight-flash'), 2000);
-    }
-};
-
-document.getElementById('toggle-view-btn').onclick = () => {
-    isCompactView = !isCompactView;
-    document.getElementById('toggle-view-btn').textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
-    render();
-};
-
-document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-document.getElementById('logout-btn').onclick = () => signOut(auth);
-document.getElementById('export-btn').onclick = () => exportReport();
-document.getElementById('sync-comum-btn').onclick = () => sendReportToDiscord('Comum');
-document.getElementById('sync-universal-btn').onclick = () => sendReportToDiscord('Universal');
-document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
+// --- AUTH E DADOS ---
 
 onAuthStateChanged(auth, (user) => {
     if (user) {
@@ -71,6 +52,41 @@ onAuthStateChanged(auth, (user) => {
         document.getElementById('app-content').style.display = 'none';
     }
 });
+
+async function loadUserData() {
+    initializeBossData();
+    const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.timers) {
+            data.timers.forEach(saved => {
+                const b = findBossById(saved.id);
+                if (b) { b.respawnTime = saved.time; b.alerted = saved.alerted; }
+            });
+        }
+        if (data.discordWebhook) {
+            document.getElementById('discord-webhook-input').value = data.discordWebhook;
+        }
+    }
+    render();
+}
+
+async function save() {
+    if (!currentUser) return;
+    const list = [];
+    ['Comum', 'Universal'].forEach(type => {
+        for (const f in BOSS_DATA[type].floors) {
+            BOSS_DATA[type].floors[f].bosses.forEach(b => {
+                list.push({ id: b.id, time: b.respawnTime, alerted: b.alerted });
+            });
+        }
+    });
+    const webhookValue = document.getElementById('discord-webhook-input').value;
+    await setDoc(doc(db, "users", currentUser.uid), { 
+        timers: list, 
+        discordWebhook: webhookValue 
+    });
+}
 
 function initializeBossData() {
     BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal': { name: 'Folkvangr Universal', floors: {} } };
@@ -89,32 +105,6 @@ function initializeBossData() {
     });
 }
 
-async function loadUserData() {
-    initializeBossData();
-    const docSnap = await getDoc(doc(db, "users", currentUser.uid));
-    if (docSnap.exists()) {
-        const saved = docSnap.data().timers;
-        saved.forEach(s => {
-            const b = findBossById(s.id);
-            if (b) { b.respawnTime = s.time; b.alerted = s.alerted; }
-        });
-    }
-    render();
-}
-
-async function save() {
-    if (!currentUser) return;
-    const list = [];
-    ['Comum', 'Universal'].forEach(t => {
-        for (const f in BOSS_DATA[t].floors) {
-            BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                list.push({id: b.id, time: b.respawnTime, alerted: b.alerted});
-            });
-        }
-    });
-    await setDoc(doc(db, "users", currentUser.uid), { timers: list });
-}
-
 function findBossById(id) {
     for (const t in BOSS_DATA) {
         for (const f in BOSS_DATA[t].floors) {
@@ -123,6 +113,150 @@ function findBossById(id) {
         }
     }
 }
+
+// --- FUNÇÕES DE INTERAÇÃO ---
+
+window.killBoss = (id) => {
+    const b = findBossById(id);
+    b.lastRespawnTime = b.respawnTime;
+    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
+    b.respawnTime = Date.now() + duration;
+    b.alerted = false;
+    save(); render();
+};
+
+window.undoKill = (id) => {
+    const b = findBossById(id);
+    if (b.lastRespawnTime !== null) {
+        b.respawnTime = b.lastRespawnTime;
+        b.lastRespawnTime = null;
+        b.alerted = false;
+        save(); render();
+    } else { alert("Nada para desfazer!"); }
+};
+
+window.setManualTime = (id) => {
+    const val = document.getElementById('manual-input-' + id).value;
+    if (!val) return alert("Selecione o horário!");
+    const b = findBossById(id);
+    b.lastRespawnTime = b.respawnTime;
+    const parts = val.split(':').map(Number);
+    const d = new Date(); d.setHours(parts[0], parts[1], parts[2] || 0, 0);
+    if (d > new Date()) d.setDate(d.getDate() - 1);
+    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
+    b.respawnTime = d.getTime() + duration;
+    b.alerted = false;
+    save(); render();
+};
+
+window.resetBoss = (id) => {
+    const b = findBossById(id);
+    b.respawnTime = 0; b.alerted = false; b.lastRespawnTime = null;
+    save(); render();
+};
+
+window.scrollToBoss = (id) => {
+    const element = document.getElementById('card-' + id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('highlight-flash');
+        setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+    }
+};
+
+// --- SYNC DISCORD DINÂMICO ---
+
+async function sendReportToDiscord(filterType) {
+    const webhookUrl = document.getElementById('discord-webhook-input').value;
+    if (!webhookUrl || !webhookUrl.startsWith('https://discord.com/api/webhooks/')) {
+        return alert("Por favor, configure uma URL de Webhook válida primeiro!");
+    }
+
+    const btnId = filterType === 'Comum' ? 'sync-comum-btn' : 'sync-universal-btn';
+    const btn = document.getElementById(btnId);
+    const originalText = btn.textContent;
+    btn.textContent = "⌛ Enviando...";
+    btn.disabled = true;
+
+    let filtered = [];
+    for (const f in BOSS_DATA[filterType].floors) {
+        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { filtered.push({ ...b, typeLabel: filterType }); });
+    }
+
+    const active = filtered.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
+    let desc = `**⏳ PRÓXIMOS RESPAWNS (${filterType.toUpperCase()})**\n`;
+    if (active.length > 0) {
+        active.forEach(b => { desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**\n`; });
+    } else { desc += "Nenhum boss em contagem no momento.\n"; }
+
+    const payload = {
+        embeds: [{
+            title: `⚔️ STATUS ${filterType.toUpperCase()} - LEGEND OF YMIR`,
+            description: desc.substring(0, 4000),
+            color: filterType === 'Comum' ? 3066993 : 5814783,
+            footer: { text: 'Tracker de: ' + currentUser.displayName },
+            timestamp: new Date().toISOString()
+        }]
+    };
+
+    try {
+        const response = await fetch(webhookUrl, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'application/json' }, 
+            body: JSON.stringify(payload) 
+        });
+        btn.textContent = response.ok ? "✅ Sincronizado!" : "❌ Erro";
+    } catch (err) { 
+        btn.textContent = "❌ Erro";
+        console.error(err);
+    } finally { 
+        setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000); 
+    }
+}
+
+// --- HANDLERS ---
+
+document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+document.getElementById('toggle-view-btn').onclick = () => {
+    isCompactView = !isCompactView;
+    document.getElementById('toggle-view-btn').textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
+    render();
+};
+document.getElementById('save-config-btn').onclick = () => {
+    save();
+    alert("Configuração de Webhook salva com sucesso!");
+};
+document.getElementById('sync-comum-btn').onclick = () => sendReportToDiscord('Comum');
+document.getElementById('sync-universal-btn').onclick = () => sendReportToDiscord('Universal');
+document.getElementById('export-btn').onclick = () => {
+    let allBosses = [];
+    ['Comum', 'Universal'].forEach(type => {
+        for (const f in BOSS_DATA[type].floors) {
+            BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b, typeLabel: type }); });
+        }
+    });
+    const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
+    let text = "⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️\n\n⏳ PRÓXIMOS RESPAWNS:\n" + 
+               active.map(b => `${b.typeLabel} - ${b.floor} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}`).join('\n');
+    const blob = new Blob([text], { type: 'text/plain' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'Relatorio_Ymir.txt';
+    link.click();
+};
+
+document.getElementById('reset-all-btn').onclick = async () => {
+    if (!confirm("Isso apagará TODOS os tempos atuais. Confirmar?")) return;
+    ['Comum', 'Universal'].forEach(type => {
+        for (const f in BOSS_DATA[type].floors) {
+            BOSS_DATA[type].floors[f].bosses.forEach(boss => { boss.respawnTime = 0; boss.alerted = false; });
+        }
+    });
+    await save(); render();
+};
+
+// --- RENDER E LOOPS ---
 
 function updateNextBossHighlight() {
     let allActive = [];
@@ -147,62 +281,12 @@ function updateNextBossHighlight() {
         highlightDiv.innerHTML = `<div class="next-boss-info">
             <span>🎯 PRÓXIMO: <strong>${next.name}</strong> <small>(${next.typeLabel} - ${next.floor})</small></span>
             <span class="next-boss-timer">${h}:${m}:${s}</span>
-            <small style="color: #d4af37; display:block; margin-top:5px;">(Clique para localizar)</small>
         </div>`;
     } else {
         highlightDiv.removeAttribute('onclick');
         highlightDiv.innerHTML = "<span>⚔️ Nenhum boss em contagem no momento.</span>";
     }
 }
-
-window.undoKill = (id) => {
-    const b = findBossById(id);
-    if (b.lastRespawnTime !== null) {
-        b.respawnTime = b.lastRespawnTime;
-        b.lastRespawnTime = null;
-        b.alerted = false;
-        save(); render();
-    } else { alert("Nada para desfazer!"); }
-};
-
-window.killBoss = (id) => {
-    const b = findBossById(id);
-    b.lastRespawnTime = b.respawnTime;
-    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = Date.now() + duration;
-    b.alerted = false;
-    save(); render();
-};
-
-window.setManualTime = (id) => {
-    const val = document.getElementById('manual-input-' + id).value;
-    if (!val) return alert("Selecione o horário!");
-    const b = findBossById(id);
-    b.lastRespawnTime = b.respawnTime;
-    const parts = val.split(':').map(Number);
-    const d = new Date(); d.setHours(parts[0], parts[1], parts[2] || 0, 0);
-    if (d > new Date()) d.setDate(d.getDate() - 1);
-    const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = d.getTime() + duration;
-    b.alerted = false;
-    save(); render();
-};
-
-window.resetBoss = (id) => {
-    const b = findBossById(id);
-    b.respawnTime = 0; b.alerted = false; b.lastRespawnTime = null;
-    save(); render();
-};
-
-window.resetAllTimers = async () => {
-    if (!confirm("Resetar tudo?")) return;
-    ['Comum', 'Universal'].forEach(type => {
-        for (const f in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[f].bosses.forEach(boss => { boss.respawnTime = 0; boss.alerted = false; });
-        }
-    });
-    await save(); render();
-};
 
 function updateBossTimers() {
     const now = Date.now();
@@ -228,15 +312,12 @@ function updateBossTimers() {
                     const percent = (diff / duration) * 100;
                     bar.style.width = percent + '%';
                     
-                    // Lógica do Efeito de Fogo (< 1 minuto)
                     if (diff <= ONE_MINUTE_MS) {
                         card.classList.add('fire-alert');
                         card.classList.remove('alert');
                         timerTxt.style.color = "#ff8c00";
                         bar.style.backgroundColor = "#ff4500";
-                    } 
-                    // Alerta normal (5 minutos)
-                    else if (diff <= FIVE_MINUTES_MS) {
+                    } else if (diff <= FIVE_MINUTES_MS) {
                         timerTxt.style.color = "#ff4d4d";
                         bar.style.backgroundColor = "#ff4d4d";
                         card.classList.add('alert');
@@ -296,12 +377,12 @@ function render() {
                         </div>
                         <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
                         <div class="manual-box">
-                            <input type="time" id="manual-input-${boss.id}" step="1" onkeydown="if(event.key==='Enter') setManualTime('${boss.id}')">
-                            <button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button>
+                            <input type="time" id="manual-input-${boss.id}" step="1" onkeydown="if(event.key==='Enter') window.setManualTime('${boss.id}')">
+                            <button class="conf-btn" onclick="window.setManualTime('${boss.id}')">OK</button>
                         </div>
                         <div class="action-footer">
-                            <button class="undo-btn" onclick="undoKill('${boss.id}')">↩ Desfazer</button>
-                            <button class="reset-btn" onclick="resetBoss('${boss.id}')">Resetar</button>
+                            <button class="undo-btn" onclick="window.undoKill('${boss.id}')">↩ Desfazer</button>
+                            <button class="reset-btn" onclick="window.resetBoss('${boss.id}')">Resetar</button>
                         </div>
                     </div>`;
             });
@@ -311,58 +392,6 @@ function render() {
         section.appendChild(grid);
         container.appendChild(section);
     });
-}
-
-async function sendReportToDiscord(filterType) {
-    if (!DISCORD_WEBHOOK_URL) return;
-    const btnId = filterType === 'Comum' ? 'sync-comum-btn' : 'sync-universal-btn';
-    const btn = document.getElementById(btnId);
-    const originalText = btn.textContent;
-    btn.textContent = "⌛...";
-    btn.disabled = true;
-
-    let filtered = [];
-    for (const f in BOSS_DATA[filterType].floors) {
-        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { filtered.push({ ...b, typeLabel: filterType }); });
-    }
-
-    const active = filtered.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
-    let desc = `**⏳ PRÓXIMOS RESPAWNS (${filterType.toUpperCase()})**\n`;
-    if (active.length > 0) {
-        active.forEach(b => { desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**\n`; });
-    } else { desc += "Nenhum no momento.\n"; }
-
-    const payload = {
-        embeds: [{
-            title: `⚔️ STATUS ${filterType.toUpperCase()} - LEGEND OF YMIR`,
-            description: desc.substring(0, 4000),
-            color: filterType === 'Comum' ? 3066993 : 5814783,
-            footer: { text: 'Enviado por: ' + (currentUser ? currentUser.displayName : 'Sistema') },
-            timestamp: new Date().toISOString()
-        }]
-    };
-
-    try {
-        const response = await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-        btn.textContent = response.ok ? "✅ Sincronizado!" : "❌ Erro";
-    } catch (err) { btn.textContent = "❌ Erro"; }
-    finally { setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000); }
-}
-
-function exportReport() {
-    let allBosses = [];
-    ['Comum', 'Universal'].forEach(type => {
-        for (const f in BOSS_DATA[type].floors) {
-            BOSS_DATA[type].floors[f].bosses.forEach(b => { allBosses.push({ ...b, typeLabel: type }); });
-        }
-    });
-    const active = allBosses.filter(b => b.respawnTime > 0).sort((a, b) => a.respawnTime - b.respawnTime);
-    let text = "⚔️ RELATÓRIO DE BOSSES - YMIR ⚔️\n\n⏳ PRÓXIMOS RESPAWNS:\n" + active.map(b => `${b.typeLabel} - ${b.floor} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}`).join('\n');
-    const blob = new Blob([text], { type: 'text/plain' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'Relatorio_Ymir.txt';
-    link.click();
 }
 
 setInterval(() => { if(currentUser) updateBossTimers(); }, 1000);
