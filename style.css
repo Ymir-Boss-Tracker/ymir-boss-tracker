@@ -96,6 +96,7 @@ header.main-banner {
     min-width: 280px; 
     transition: 0.3s;
     text-align: left; 
+    position: relative;
 }
 
 .highlight-flash {
@@ -103,9 +104,30 @@ header.main-banner {
     box-shadow: 0 0 20px #d4af37;
 }
 
+/* Efeito de 5 minutos (Aviso) */
 .boss-card.alert { 
     border-color: #ff4d4d; 
     animation: pulse 1.5s infinite;
+}
+
+/* EFEITO DE FOGO (Menos de 1 minuto) */
+.boss-card.fire-alert {
+    border-color: #ff8c00 !important;
+    animation: fire-glow 0.8s infinite alternate, shake 0.2s infinite;
+    z-index: 5;
+}
+
+@keyframes fire-glow {
+    0% { box-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00, inset 0 0 10px #ff4500; }
+    100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff4500, inset 0 0 20px #ff0000; }
+}
+
+@keyframes shake {
+    0% { transform: translate(1px, 1px) rotate(0deg); }
+    25% { transform: translate(-1px, -1px) rotate(-0.5deg); }
+    50% { transform: translate(-1px, 1px) rotate(0.5deg); }
+    75% { transform: translate(1px, -1px) rotate(-0.5deg); }
+    100% { transform: translate(1px, 1px) rotate(0deg); }
 }
 
 @keyframes pulse {
