@@ -31,7 +31,7 @@ const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
 let BOSS_DATA = { 'Comum': { name: 'Folkvangr Comum', floors: {} }, 'Universal': { name: 'Folkvangr Universal', floors: {} } };
 let currentUser = null;
 let isCompactView = false;
-let userWebhookUrl = ""; // Webhook dinâmico
+let userWebhookUrl = ""; 
 
 window.scrollToBoss = (id) => {
     const element = document.getElementById('card-' + id);
@@ -55,7 +55,6 @@ document.getElementById('sync-comum-btn').onclick = () => sendReportToDiscord('C
 document.getElementById('sync-universal-btn').onclick = () => sendReportToDiscord('Universal');
 document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
 
-// Salvar Webhook
 document.getElementById('save-webhook-btn').onclick = async () => {
     const val = document.getElementById('webhook-url-input').value.trim();
     if (!val.startsWith("https://discord.com/api/webhooks/")) {
@@ -109,7 +108,6 @@ async function loadUserData() {
             const b = findBossById(s.id);
             if (b) { b.respawnTime = s.time; b.alerted = s.alerted; }
         });
-        // Carrega o Webhook salvo
         if (data.webhookUrl) {
             userWebhookUrl = data.webhookUrl;
             document.getElementById('webhook-url-input').value = userWebhookUrl;
@@ -128,7 +126,6 @@ async function save() {
             });
         }
     });
-    // Salva timers e o webhook
     await setDoc(doc(db, "users", currentUser.uid), { 
         timers: list,
         webhookUrl: userWebhookUrl 
