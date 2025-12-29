@@ -1,8 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Montserrat:wght@300;400;700&display=swap');
 
-html {
-    scroll-behavior: smooth;
-}
+html { scroll-behavior: smooth; }
 
 body { 
     font-family: 'Montserrat', sans-serif; 
@@ -48,116 +46,46 @@ header.main-banner {
     transition: 0.3s;
 }
 
-.next-boss-highlight:hover {
-    background: rgba(30, 30, 40, 0.95);
-    transform: scale(1.02);
-    border-color: #d4af37;
-}
-
 .next-boss-timer { font-size: 1.8rem; color: #d4af37; display: block; }
 
-.view-toggle-container { 
-    margin: 20px 2.5%; 
-    display: flex;
-    justify-content: flex-end; 
-}
-
+.view-toggle-container { margin: 20px 2.5%; display: flex; justify-content: flex-end; }
 .toggle-btn { 
     background: #1a1a1a; color: #d4af37; border: 1px solid #d4af37; 
     padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; 
-    transition: 0.3s;
 }
-.toggle-btn:hover { background: #d4af37; color: #000; }
 
 .type-section { padding: 20px; width: 95%; margin: 0 auto; }
-.type-section h2 { color: #d4af37; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
 
-.boss-grid { 
-    display: flex;
-    flex-wrap: nowrap;
-    justify-content: center; 
-    gap: 15px; 
-    overflow-x: auto; 
-    padding: 10px 5px 20px 5px;
-}
+/* MELHORIA: CORES POR RARIDADE */
+.type-comum h2 { color: #3498db; border-bottom: 1px solid rgba(52, 152, 219, 0.3); }
+.type-comum .boss-card { border-left: 3px solid #3498db; }
 
-.floor-section h3 { 
-    background: rgba(26, 26, 26, 0.8); 
-    padding: 10px; 
-    border-left: 4px solid #d4af37; 
-    margin-bottom: 10px;
-}
+.type-universal h2 { color: #9b59b6; border-bottom: 1px solid rgba(155, 89, 182, 0.3); }
+.type-universal .boss-card { border-left: 3px solid #9b59b6; }
+
+.boss-grid { display: flex; flex-wrap: nowrap; justify-content: center; gap: 15px; overflow-x: auto; padding: 10px 5px 20px 5px; }
+.floor-section h3 { background: rgba(26, 26, 26, 0.8); padding: 10px; border-left: 4px solid #d4af37; margin-bottom: 10px; text-align: left; }
 
 .boss-card { 
-    background: #111; 
-    border: 1px solid #2a2a2a; 
-    border-radius: 10px; 
-    padding: 15px; 
-    min-width: 280px; 
-    transition: 0.3s;
-    text-align: left; 
-    position: relative;
+    background: #111; border: 1px solid #2a2a2a; border-radius: 10px; 
+    padding: 15px; min-width: 280px; transition: 0.2s; text-align: left; position: relative; 
 }
 
-.highlight-flash {
-    border-color: #d4af37 !important;
-    box-shadow: 0 0 20px #d4af37;
-}
-
-/* Efeito de 5 minutos (Aviso) */
-.boss-card.alert { 
-    border-color: #ff4d4d; 
-    animation: pulse 1.5s infinite;
-}
-
-/* EFEITO DE FOGO (Menos de 1 minuto) */
-.boss-card.fire-alert {
-    border-color: #ff8c00 !important;
-    animation: fire-glow 0.8s infinite alternate, shake 0.2s infinite;
-    z-index: 5;
-}
-
-@keyframes fire-glow {
-    0% { box-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00, inset 0 0 10px #ff4500; }
-    100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff4500, inset 0 0 20px #ff0000; }
-}
-
-@keyframes shake {
-    0% { transform: translate(1px, 1px) rotate(0deg); }
-    25% { transform: translate(-1px, -1px) rotate(-0.5deg); }
-    50% { transform: translate(-1px, 1px) rotate(0.5deg); }
-    75% { transform: translate(1px, -1px) rotate(-0.5deg); }
-    100% { transform: translate(1px, 1px) rotate(0deg); }
-}
-
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
-}
-
-.boss-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-
+.boss-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }
 .boss-thumb { 
-    width: 60px; height: 60px; 
-    border-radius: 8px; 
-    border: 2px solid #d4af37; 
-    object-fit: cover; 
-    object-position: center top; 
+    width: 65px; height: 65px; border-radius: 10px; border: 2px solid rgba(212, 175, 55, 0.5); 
+    object-fit: cover; object-position: center 15%; background: #000;
 }
+.boss-header h4 { margin: 0; font-size: 1.3rem; color: #fff; text-transform: uppercase; }
 
-.timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center;}
+.timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center; font-family: monospace; }
 .boss-progress-container { background: #222; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 15px; }
 .boss-progress-bar { height: 100%; transition: width 1s linear; }
 
 .static-times { background: #080808; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 10px; }
 .static-times span { color: #fff; }
 
-.kill-btn { 
-    background: #d4af37; color: #000; width: 100%; padding: 10px; 
-    font-weight: bold; border: none; border-radius: 4px; cursor: pointer; 
-}
-
+.kill-btn { background: #d4af37; color: #000; width: 100%; padding: 10px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
 .manual-box { display: flex; gap: 5px; margin: 10px 0; }
 .manual-box input { flex: 1; background: #000; color: #fff; border: 1px solid #333; padding: 5px; border-radius: 4px; }
 .conf-btn { background: #2ecc71; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
@@ -165,12 +93,17 @@ header.main-banner {
 .action-footer { display: flex; gap: 5px; }
 .undo-btn, .reset-btn { flex: 1; background: #333; color: #ccc; border: none; padding: 6px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; }
 
-.type-section.compact-mode .boss-card { min-width: 200px; padding: 10px; text-align: center; }
-.type-section.compact-mode .boss-header { justify-content: center; }
-.type-section.compact-mode .manual-box, .type-section.compact-mode .action-footer { display: none; }
-.type-section.compact-mode .timer { font-size: 1.2rem; }
+/* Alertas */
+.boss-card.alert { border-color: #ff4d4d; animation: pulse 1.5s infinite; }
+.boss-card.fire-alert { border-color: #ff8c00 !important; animation: fire-glow 0.8s infinite alternate, shake 0.2s infinite; z-index: 5; }
+
+@keyframes fire-glow { 0% { box-shadow: 0 0 10px #ff4500; } 100% { box-shadow: 0 0 20px #ff0000; } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
 
 .global-actions { margin-top: 40px; }
 .export-button { background: #f1c40f; padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; }
 .sync-discord-button { color: #fff; padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-left: 10px; }
 .reset-all-button { background: #ff4d4d; color: #fff; padding: 10px 20px; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; margin-top: 15px; }
+
+/* Modo Compacto */
+.compact-mode .boss-thumb, .compact-mode .manual-box, .compact-mode .action-footer { display: none; }
