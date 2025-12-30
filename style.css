@@ -40,8 +40,8 @@ header.main-banner {
     border: 1px solid rgba(212, 175, 55, 0.4);
     border-radius: 12px;
     padding: 15px;
-    margin: -40px auto 30px auto; /* Centralizado e com margem negativa menor */
-    max-width: 400px; /* Largura reduzida para não ocupar a tela toda */
+    margin: -40px auto 30px auto;
+    max-width: 400px;
     width: 90%;
     position: relative;
     z-index: 10;
@@ -139,11 +139,11 @@ header.main-banner {
 .boss-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
 
 .boss-thumb { 
-    width: 60px; height: 60px; 
-    border-radius: 8px; 
+    width: 65px; height: 65px; 
+    border-radius: 50%; /* Torna a miniatura redonda para focar no rosto */
     border: 2px solid #d4af37; 
     object-fit: cover; 
-    object-position: center top; 
+    object-position: center 20%; /* Ajuste para focar no topo/rosto da imagem */
 }
 
 .timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center;}
