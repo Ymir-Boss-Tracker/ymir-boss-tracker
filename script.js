@@ -141,6 +141,23 @@ function findBossById(id) {
     }
 }
 
+// Função para atualizar apenas o texto de horários do card sem renderizar tudo
+function updateSingleCardDOM(id) {
+    const b = findBossById(id);
+    const card = document.getElementById('card-' + id);
+    if (!card) return;
+
+    const duration = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
+    const mStr = b.respawnTime > 0 ? new Date(b.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--";
+    const nStr = b.respawnTime > 0 ? new Date(b.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
+
+    const mortoSpan = card.querySelector('.label-morto span');
+    const nasceSpan = card.querySelector('.label-nasce span');
+    
+    if (mortoSpan) mortoSpan.textContent = mStr;
+    if (nasceSpan) nasceSpan.textContent = nStr;
+}
+
 function updateNextBossHighlight() {
     let allActive = [];
     ['Comum', 'Universal'].forEach(type => {
@@ -178,7 +195,8 @@ window.undoKill = (id) => {
         b.respawnTime = b.lastRespawnTime;
         b.lastRespawnTime = null;
         b.alerted = false;
-        save(); render();
+        save(); 
+        updateSingleCardDOM(id);
     } else { alert("Nada para desfazer!"); }
 };
 
@@ -188,7 +206,8 @@ window.killBoss = (id) => {
     const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
     b.respawnTime = Date.now() + duration;
     b.alerted = false;
-    save(); render();
+    save(); 
+    updateSingleCardDOM(id);
 };
 
 window.setManualTime = (id) => {
@@ -202,13 +221,15 @@ window.setManualTime = (id) => {
     const duration = id.includes('universal') ? TWO_HOURS_MS : EIGHT_HOURS_MS;
     b.respawnTime = d.getTime() + duration;
     b.alerted = false;
-    save(); render();
+    save(); 
+    updateSingleCardDOM(id);
 };
 
 window.resetBoss = (id) => {
     const b = findBossById(id);
     b.respawnTime = 0; b.alerted = false; b.lastRespawnTime = null;
-    save(); render();
+    save(); 
+    updateSingleCardDOM(id);
 };
 
 window.resetAllTimers = async () => {
