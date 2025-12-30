@@ -17,10 +17,10 @@ const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
 const BOSS_IMAGES = {
-    "Berserker": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674395545-53214fcd-e6aa-41e5-b91d-ba44ee3bd3f3.png",
-    "Mage": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674409406-c5b70062-7ad2-4958-9a5c-3d2b2a2edcb6.png",
-    "Skald": "https://framerusercontent.com/images/XJzkQNlvMBB6ZOBgb6DUs5u1Mgk.png?width=1000&height=2280",
-    "Lancer": "https://placehold.co/400x400/000000/000000.png" 
+    "Berserker": "https://gcdn.wemade.games/prod/lygl/official/api/upload/newsRelease/1762757175011-95b45f9b-463c-4e00-ae29-ea0016f20ba5.jpg",
+    "Mage": "https://gcdn.wemade.games/prod/lygl/official/api/upload/newsRelease/1763969733136-719e6516-79a9-49e6-a2e8-6861adb04d3a.jpg",
+    "Skald": "https://gcdn.wemade.games/prod/lygl/official/api/upload/newsRelease/1763363391089-56e517dd-bee0-4800-abac-c20e7842ef40.jpg",
+    "Lancer": "https://gcdn.wemade.games/prod/lygl/official/api/upload/newsRelease/1764576949332-e37b5d55-84e8-4a2e-848d-36fe090aa086.jpg" 
 };
 
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
