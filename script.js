@@ -16,80 +16,127 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
-// Configurações de Tempos
+// Constantes de tempo
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
-const MYRK_MIN_MS = 50 * 60 * 1000; 
-const MYRK_MAX_MS = 60 * 60 * 1000; 
-const FIVE_MINS = 5 * 60 * 1000;
+const ONE_HOUR_MS = 1 * 60 * 60 * 1000; // Tempo Myrkheimr
+const FIVE_MINUTES_MS = 5 * 1000 * 60;
+const ONE_MINUTE_MS = 1000 * 60;
 
-const BOSS_IMAGES = {
-    "Berserker": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674395545-53214fcd-e6aa-41e5-b91d-ba44ee3bd3f3.png",
-    "Mage": "https://gcdn-dev.wemade.games/dev/lygl/official/api/upload/helpInquiry/1764674409406-c5b70062-7ad2-4958-9a5c-3d2b2a2edcb6.png",
-    "Skald": "https://framerusercontent.com/images/XJzkQNlvMBB6ZOBgb6DUs5u1Mgk.png?width=1000&height=2280"
+const BOSS_DATA_STRUCTURE = {
+    'Comum': { name: 'Folkvangr Comum', bosses: ["Lancer", "Berserker", "Skald", "Mage"], duration: EIGHT_HOURS_MS },
+    'Universal': { name: 'Folkvangr Universal', bosses: ["Lancer", "Berserker", "Skald", "Mage"], duration: TWO_HOURS_MS },
+    'Myrk1': { 
+        name: 'Myrkheimr Canal 1', 
+        bosses: ["[Lv.35] Trésá l", "[Lv.40] Troll Veterano", "[Lv.45] Jotun Truculento", "[Lv.50] Jotun do Fogo Atroz"], 
+        duration: ONE_HOUR_MS 
+    },
+    'Myrk2': { 
+        name: 'Myrkheimr Canal 2', 
+        bosses: ["[Lv.35] Trésá l", "[Lv.40] Troll Veterano", "[Lv.45] Jotun Truculento", "[Lv.50] Jotun do Fogo Atroz"], 
+        duration: ONE_HOUR_MS 
+    }
 };
-
-const MYRK_LIST = [
-    "[Lv.66] Capitão Intruso Trésá l",
-    "[Lv.67] Capitão Intruso Troll Veterano",
-    "[Lv.68] Capitão Combatente Jotun Truculento",
-    "[Lv.68] Capitão Desordeiro Jotun do Fogo Atroz"
-];
 
 let BOSS_DATA = {};
 let currentUser = null;
 let isCompactView = false;
 let userWebhookUrl = "";
 
+window.scrollToBoss = (id) => {
+    const element = document.getElementById('card-' + id);
+    if (element) {
+        element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        element.classList.add('highlight-flash');
+        setTimeout(() => element.classList.remove('highlight-flash'), 2000);
+    }
+};
+
+document.getElementById('toggle-view-btn').onclick = () => {
+    isCompactView = !isCompactView;
+    document.getElementById('toggle-view-btn').textContent = isCompactView ? "🎴 Modo Cards" : "📱 Modo Compacto";
+    render();
+};
+
+document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
+document.getElementById('logout-btn').onclick = () => signOut(auth);
+document.getElementById('export-btn').onclick = () => exportReport();
+document.getElementById('sync-comum-btn').onclick = () => sendReportToDiscord('Comum');
+document.getElementById('sync-universal-btn').onclick = () => sendReportToDiscord('Universal');
+document.getElementById('sync-myrk1-btn').onclick = () => sendReportToDiscord('Myrk1');
+document.getElementById('sync-myrk2-btn').onclick = () => sendReportToDiscord('Myrk2');
+document.getElementById('reset-all-btn').onclick = () => resetAllTimers();
+
+document.getElementById('save-webhook-btn').onclick = async () => {
+    const val = document.getElementById('webhook-url-input').value.trim();
+    if (val && !val.startsWith("https://discord.com/api/webhooks/")) return alert("URL Inválida!");
+    userWebhookUrl = val; await save(); alert("Webhook salvo!");
+};
+
+onAuthStateChanged(auth, (user) => {
+    if (user) {
+        currentUser = user;
+        document.getElementById('login-btn').style.display = 'none';
+        document.getElementById('user-info').style.display = 'block';
+        document.getElementById('user-name').textContent = 'Olá, ' + user.displayName;
+        document.getElementById('app-content').style.display = 'block';
+        loadUserData();
+    } else {
+        currentUser = null;
+        document.getElementById('login-btn').style.display = 'inline-block';
+        document.getElementById('user-info').style.display = 'none';
+        document.getElementById('app-content').style.display = 'none';
+    }
+});
+
 function initializeBossData() {
     BOSS_DATA = {};
-    const configs = {
-        'Comum': { name: 'Folkvangr Comum', bosses: ["Lancer", "Berserker", "Skald", "Mage"], dur: EIGHT_HOURS_MS, win: false },
-        'Universal': { name: 'Folkvangr Universal', bosses: ["Lancer", "Berserker", "Skald", "Mage"], dur: TWO_HOURS_MS, win: false },
-        'Myrk1': { name: 'Myrkheimr Canal 1', bosses: MYRK_LIST, dur: MYRK_MIN_MS, win: true },
-        'Myrk2': { name: 'Myrkheimr Canal 2', bosses: MYRK_LIST, dur: MYRK_MIN_MS, win: true }
-    };
-
-    for (const key in configs) {
-        BOSS_DATA[key] = { name: configs[key].name, floors: {} };
-        const floorsCount = (key.startsWith('Myrk')) ? 1 : 4;
-        for (let i = 1; i <= floorsCount; i++) {
-            const fName = floorsCount > 1 ? `Piso ${i}` : 'Área Única';
-            BOSS_DATA[key].floors[fName] = { bosses: [] };
-            configs[key].bosses.forEach(name => {
-                BOSS_DATA[key].floors[fName].bosses.push({
-                    id: `${key}_${i}_${name.replace(/\s+/g, '_')}`,
-                    name, respawnTime: 0, maxRespawnTime: 0, lastRespawnTime: null,
-                    alerted: false, isWindowed: configs[key].win, duration: configs[key].dur,
-                    image: BOSS_IMAGES[name] || "https://placehold.co/50x50/111/d4af37?text=Boss"
+    for (const key in BOSS_DATA_STRUCTURE) {
+        const config = BOSS_DATA_STRUCTURE[key];
+        BOSS_DATA[key] = { name: config.name, floors: {} };
+        const totalFloors = (key === 'Comum' || key === 'Universal') ? 4 : 1;
+        
+        for (let p = 1; p <= totalFloors; p++) {
+            const floorKey = totalFloors > 1 ? 'Piso ' + p : 'Área Única';
+            BOSS_DATA[key].floors[floorKey] = { name: floorKey, bosses: [] };
+            config.bosses.forEach(name => {
+                BOSS_DATA[key].floors[floorKey].bosses.push({
+                    id: `${key.toLowerCase()}_${p}_${name.replace(/[\[\]\.\s]+/g, '_').toLowerCase()}`,
+                    name: name, respawnTime: 0, lastRespawnTime: null, alerted: false,
+                    floor: floorKey, typeKey: key, duration: config.duration, notSure: false
                 });
             });
         }
     }
 }
 
-// Auth e Data Loading
-onAuthStateChanged(auth, async (user) => {
-    if (user) {
-        currentUser = user;
-        document.getElementById('user-info').style.display = 'block';
-        document.getElementById('login-btn').style.display = 'none';
-        document.getElementById('user-name').textContent = `Olá, ${user.displayName}`;
-        document.getElementById('app-content').style.display = 'block';
-        initializeBossData();
-        const snap = await getDoc(doc(db, "users", user.uid));
-        if (snap.exists()) {
-            const data = snap.data();
-            userWebhookUrl = data.webhookUrl || "";
-            document.getElementById('webhook-url-input').value = userWebhookUrl;
-            (data.timers || []).forEach(saved => {
-                const b = findBossById(saved.id);
-                if (b) { b.respawnTime = saved.time; b.maxRespawnTime = saved.maxTime || 0; }
+async function loadUserData() {
+    initializeBossData();
+    const docSnap = await getDoc(doc(db, "users", currentUser.uid));
+    if (docSnap.exists()) {
+        const data = docSnap.data();
+        (data.timers || []).forEach(s => {
+            const b = findBossById(s.id);
+            if (b) { b.respawnTime = s.time; b.alerted = s.alerted; b.notSure = s.notSure || false; }
+        });
+        userWebhookUrl = data.webhookUrl || "";
+        document.getElementById('webhook-url-input').value = userWebhookUrl;
+    }
+    render();
+}
+
+async function save() {
+    if (!currentUser) return;
+    const list = [];
+    for (const t in BOSS_DATA) {
+        for (const f in BOSS_DATA[t].floors) {
+            BOSS_DATA[t].floors[f].bosses.forEach(b => {
+                list.push({id: b.id, time: b.respawnTime, alerted: b.alerted, notSure: b.notSure});
             });
         }
-        render();
     }
-});
+    await setDoc(doc(db, "users", currentUser.uid), { timers: list, webhookUrl: userWebhookUrl });
+}
 
 function findBossById(id) {
     for (const t in BOSS_DATA) {
@@ -100,72 +147,70 @@ function findBossById(id) {
     }
 }
 
-window.killBoss = (id) => {
+function updateSingleCardDOM(id) {
     const b = findBossById(id);
-    b.lastRespawnTime = b.respawnTime;
-    b.respawnTime = Date.now() + b.duration;
-    if (b.isWindowed) b.maxRespawnTime = Date.now() + MYRK_MAX_MS;
-    b.alerted = false; save(); render();
+    const card = document.getElementById('card-' + id);
+    if (!card) return;
+    card.querySelector('.label-morto span').textContent = b.respawnTime > 0 ? new Date(b.respawnTime - b.duration).toLocaleTimeString('pt-BR') : "--:--";
+    card.querySelector('.label-nasce span').textContent = b.respawnTime > 0 ? new Date(b.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
+}
+
+window.toggleNotSure = (id) => { const b = findBossById(id); b.notSure = document.getElementById('not-sure-' + id).checked; save(); };
+
+window.killBoss = (id) => {
+    const b = findBossById(id); b.lastRespawnTime = b.respawnTime;
+    b.respawnTime = Date.now() + b.duration; b.alerted = false;
+    save(); updateSingleCardDOM(id);
 };
 
 window.setManualTime = (id) => {
-    const val = document.getElementById('manual-input-' + id).value;
-    if (!val) return;
-    const b = findBossById(id);
-    const [h, m] = val.split(':').map(Number);
-    const d = new Date(); d.setHours(h, m, 0, 0);
+    const inputEl = document.getElementById('manual-input-' + id);
+    if (!inputEl.value) return alert("Selecione o horário!");
+    const b = findBossById(id); b.lastRespawnTime = b.respawnTime;
+    const parts = inputEl.value.split(':').map(Number);
+    const d = new Date(); d.setHours(parts[0], parts[1], parts[2] || 0, 0);
     if (d > new Date()) d.setDate(d.getDate() - 1);
-    b.respawnTime = d.getTime() + b.duration;
-    if (b.isWindowed) b.maxRespawnTime = d.getTime() + MYRK_MAX_MS;
-    save(); render();
+    b.respawnTime = d.getTime() + b.duration; b.alerted = false;
+    inputEl.value = ""; save(); updateSingleCardDOM(id);
 };
 
-async function save() {
-    if (!currentUser) return;
-    const timers = [];
-    for (const t in BOSS_DATA) {
-        for (const f in BOSS_DATA[t].floors) {
-            BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                timers.push({ id: b.id, time: b.respawnTime, maxTime: b.maxRespawnTime });
-            });
-        }
-    }
-    await setDoc(doc(db, "users", currentUser.uid), { timers, webhookUrl: userWebhookUrl });
-}
+window.undoKill = (id) => {
+    const b = findBossById(id);
+    if (b.lastRespawnTime !== null) { b.respawnTime = b.lastRespawnTime; b.lastRespawnTime = null; b.alerted = false; save(); updateSingleCardDOM(id); }
+};
+
+window.resetBoss = (id) => {
+    const b = findBossById(id); b.respawnTime = 0; b.alerted = false; b.notSure = false;
+    const cb = document.getElementById('not-sure-' + id); if(cb) cb.checked = false;
+    save(); updateSingleCardDOM(id);
+};
+
+window.resetAllTimers = async () => {
+    if (!confirm("Resetar tudo?")) return;
+    for (const t in BOSS_DATA) { for (const f in BOSS_DATA[t].floors) { BOSS_DATA[t].floors[f].bosses.forEach(b => { b.respawnTime = 0; b.notSure = false; }); } }
+    await save(); render();
+};
 
 function updateBossTimers() {
     const now = Date.now();
     for (const t in BOSS_DATA) {
         for (const f in BOSS_DATA[t].floors) {
-            BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                const timerEl = document.getElementById('timer-' + b.id);
-                const cardEl = document.getElementById('card-' + b.id);
-                const barEl = document.getElementById('bar-' + b.id);
-                if (!timerEl) return;
-
-                if (b.respawnTime === 0) {
-                    timerEl.textContent = "DISPONÍVEL!";
-                    if (barEl) barEl.style.width = "100%";
-                } else if (b.isWindowed && now >= b.respawnTime && now < b.maxRespawnTime) {
-                    // JANELA ABERTA
-                    cardEl.classList.add('window-open');
-                    const diffMax = b.maxRespawnTime - now;
-                    const m = Math.floor(diffMax/60000), s = Math.floor((diffMax%60000)/1000);
-                    timerEl.innerHTML = `<span class="window-status">JANELA ABERTA</span>${m}:${s.toString().padStart(2,'0')}`;
-                    if (barEl) { barEl.style.width = "100%"; barEl.style.backgroundColor = "#2ecc71"; }
-                } else if (now >= (b.isWindowed ? b.maxRespawnTime : b.respawnTime)) {
-                    b.respawnTime = 0; cardEl.classList.remove('window-open', 'alert');
-                    render();
+            BOSS_DATA[t].floors[f].bosses.forEach(boss => {
+                const timerTxt = document.getElementById('timer-' + boss.id), bar = document.getElementById('bar-' + boss.id), card = document.getElementById('card-' + boss.id);
+                if (!timerTxt || !bar || !card) return;
+                if (boss.respawnTime === 0 || boss.respawnTime <= now) {
+                    boss.respawnTime = 0; timerTxt.textContent = "DISPONÍVEL!"; timerTxt.style.color = "#2ecc71";
+                    bar.style.width = "100%"; bar.style.backgroundColor = "#2ecc71"; card.classList.remove('alert', 'fire-alert');
                 } else {
-                    const diff = b.respawnTime - now;
-                    if (barEl) barEl.style.width = (diff / (b.isWindowed ? MYRK_MIN_MS : b.duration) * 100) + "%";
-                    if (diff <= FIVE_MINS && !b.alerted) { 
-                        document.getElementById('alert-sound').play(); b.alerted = true; cardEl.classList.add('alert'); 
-                    }
-                    const h = Math.floor(diff/3600000).toString().padStart(2,'0');
-                    const m = Math.floor((diff%3600000)/60000).toString().padStart(2,'0');
-                    const s = Math.floor((diff%60000)/1000).toString().padStart(2,'0');
-                    timerEl.textContent = `${h}:${m}:${s}`;
+                    const diff = boss.respawnTime - now, percent = (diff / boss.duration) * 100;
+                    bar.style.width = percent + '%';
+                    if (diff <= ONE_MINUTE_MS) { card.classList.add('fire-alert'); timerTxt.style.color = "#ff8c00"; }
+                    else if (diff <= FIVE_MINUTES_MS) {
+                        card.classList.add('alert'); timerTxt.style.color = "#ff4d4d";
+                        if (!boss.alerted) { document.getElementById('alert-sound').play().catch(() => {}); boss.alerted = true; save(); }
+                    } else { card.classList.remove('alert', 'fire-alert'); timerTxt.style.color = "#f1c40f"; boss.alerted = false; }
+                    const h = Math.floor(diff / 3600000).toString().padStart(2,'0'), m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0'), s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
+                    timerTxt.textContent = `${h}:${m}:${s}`;
                 }
             });
         }
@@ -173,41 +218,62 @@ function updateBossTimers() {
 }
 
 function render() {
-    const container = document.getElementById('boss-list-container');
-    container.innerHTML = '';
-    for (const t in BOSS_DATA) {
-        const sec = document.createElement('section');
-        sec.className = `type-section ${isCompactView ? 'compact-mode' : ''}`;
-        sec.innerHTML = `<h2>${BOSS_DATA[t].name}</h2>`;
-        for (const f in BOSS_DATA[t].floors) {
-            const grid = document.createElement('div');
-            grid.className = 'boss-grid';
-            BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                grid.innerHTML += `
-                <div class="boss-card" id="card-${b.id}">
-                    <div class="boss-header">
-                        <img src="${b.image}" class="boss-thumb">
-                        <h4>${b.name}</h4>
-                    </div>
-                    <div class="timer" id="timer-${b.id}">--:--:--</div>
-                    <div class="boss-progress-container"><div class="boss-progress-bar" id="bar-${b.id}"></div></div>
-                    <div class="static-times">
-                        <p>Nasce: <span>${b.respawnTime > 0 ? new Date(b.respawnTime).toLocaleTimeString() : '--:--'} ${b.isWindowed ? '(+10m)' : ''}</span></p>
-                    </div>
-                    <button class="kill-btn" onclick="killBoss('${b.id}')">MORTO AGORA</button>
-                    <div class="manual-box"><input type="time" id="manual-input-${b.id}"><button class="conf-btn" onclick="setManualTime('${b.id}')">OK</button></div>
-                    <div class="action-footer">
-                        <button class="reset-btn" onclick="resetBoss('${b.id}')">Reset</button>
-                    </div>
+    const container = document.getElementById('boss-list-container'); container.innerHTML = '';
+    const viewClass = isCompactView ? 'compact-mode' : '';
+    for (const type in BOSS_DATA) {
+        const section = document.createElement('section'); section.className = `type-section ${viewClass}`;
+        section.innerHTML = `<h2>${BOSS_DATA[type].name}</h2>`;
+        const grid = document.createElement('div'); grid.className = 'floors-container';
+        for (const f in BOSS_DATA[type].floors) {
+            const floorDiv = document.createElement('div'); floorDiv.className = 'floor-section';
+            let floorHtml = `<h3>${f}</h3><div class="boss-grid">`;
+            BOSS_DATA[type].floors[f].bosses.forEach(boss => {
+                const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - boss.duration).toLocaleTimeString('pt-BR') : "--:--", nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
+                floorHtml += `<div class="boss-card" id="card-${boss.id}">
+                    <h4>${boss.name}</h4>
+                    <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
+                    <div class="boss-progress-container"><div class="boss-progress-bar" id="bar-${boss.id}"></div></div>
+                    <div class="static-times"><p class="label-morto">Morto: <span>${mStr}</span></p><p class="label-nasce">Nasce: <span>${nStr}</span></p></div>
+                    <label class="uncertainty-box"><input type="checkbox" id="not-sure-${boss.id}" ${boss.notSure ? 'checked' : ''} onchange="toggleNotSure('${boss.id}')"> Horário Incerto</label>
+                    <button class="kill-btn" onclick="killBoss('${boss.id}')">Derrotado AGORA</button>
+                    <div class="manual-box"><input type="time" id="manual-input-${boss.id}" step="1"><button class="conf-btn" onclick="setManualTime('${boss.id}')">OK</button></div>
+                    <div class="action-footer"><button class="undo-btn" onclick="undoKill('${boss.id}')">↩ Desfazer</button><button class="reset-btn" onclick="resetBoss('${boss.id}')">Reset</button></div>
                 </div>`;
             });
-            sec.appendChild(grid);
+            floorDiv.innerHTML = floorHtml + '</div>'; grid.appendChild(floorDiv);
         }
-        container.appendChild(sec);
+        section.appendChild(grid); container.appendChild(section);
     }
 }
 
-setInterval(updateBossTimers, 1000);
-document.getElementById('login-btn').onclick = () => signInWithPopup(auth, provider);
-document.getElementById('logout-btn').onclick = () => signOut(auth);
-document.getElementById('save-webhook-btn').onclick = () => { userWebhookUrl = document.getElementById('webhook-url-input').value; save(); alert("Salvo!"); };
+async function sendReportToDiscord(filterType) {
+    if (!userWebhookUrl) return alert("Configure o seu Webhook no painel abaixo!");
+    const btnId = `sync-${filterType.toLowerCase()}-btn`, btn = document.getElementById(btnId), originalText = btn.textContent;
+    btn.textContent = "⌛..."; btn.disabled = true;
+    let desc = `**⏳ PRÓXIMOS RESPAWNS (${BOSS_DATA[filterType].name})**\n`;
+    for (const f in BOSS_DATA[filterType].floors) {
+        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
+            if (b.respawnTime > 0) desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**${b.notSure ? " ⚠️" : ""}\n`;
+        });
+    }
+    try {
+        const response = await fetch(userWebhookUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ embeds: [{ title: `⚔️ STATUS ${filterType.toUpperCase()}`, description: desc, color: 3066993, timestamp: new Date().toISOString() }] }) });
+        btn.textContent = response.ok ? "✅ OK" : "❌ Erro";
+    } catch (err) { btn.textContent = "❌ Erro"; }
+    finally { setTimeout(() => { btn.textContent = originalText; btn.disabled = false; }, 3000); }
+}
+
+function exportReport() {
+    let text = "⚔️ RELATÓRIO DE BOSSES ⚔️\n\n";
+    for (const t in BOSS_DATA) {
+        for (const f in BOSS_DATA[t].floors) {
+            BOSS_DATA[t].floors[f].bosses.forEach(b => {
+                if (b.respawnTime > 0) text += `${BOSS_DATA[t].name} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}${b.notSure ? " [INCERTO]" : ""}\n`;
+            });
+        }
+    }
+    const blob = new Blob([text], { type: 'text/plain' }), link = document.createElement('a');
+    link.href = URL.createObjectURL(blob); link.download = 'Relatorio_Ymir.txt'; link.click();
+}
+
+setInterval(() => { if(currentUser) updateBossTimers(); }, 1000);
