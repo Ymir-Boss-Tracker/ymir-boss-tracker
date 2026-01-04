@@ -27,7 +27,15 @@ const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
 const FIVE_MINUTES_MS = 5 * 1000 * 60;
 const ONE_MINUTE_MS = 1000 * 60;
-const BOSS_NAMES = ["Lancer", "Berserker", "Skald", "Mage"];
+
+const BOSS_NAMES_FOLKVANGR = ["Lancer", "Berserker", "Skald", "Mage"];
+const BOSS_NAMES_MYRKHEIMR = [
+    "[Lv.66] Capitão Intruso Trésá l",
+    "[Lv.67] Capitão Intruso Troll Veterano",
+    "[Lv.68] Capitão Combatente Jotun Truculento",
+    "[Lv.68] Capitão Desordeiro Jotun do Fogo Atroz"
+];
+
 let BOSS_DATA = {};
 let currentUser = null;
 let isCompactView = false;
@@ -86,16 +94,18 @@ function initializeBossData() {
     };
 
     ['Comum', 'Universal', 'Myrkheimr1', 'Myrkheimr2'].forEach(type => {
-        // Folkvangr tem 4 pisos, Myrkheimr vamos tratar como canal único com 4 bosses
-        const totalFloors = type.includes('Myrkheimr') ? 1 : 4;
+        const isMyrk = type.includes('Myrkheimr');
+        const totalFloors = isMyrk ? 1 : 4;
+        const currentNames = isMyrk ? BOSS_NAMES_MYRKHEIMR : BOSS_NAMES_FOLKVANGR;
+
         for (let p = 1; p <= totalFloors; p++) {
-            const floorKey = type.includes('Myrkheimr') ? 'Área Única' : 'Piso ' + p;
+            const floorKey = isMyrk ? 'Área Única' : 'Piso ' + p;
             BOSS_DATA[type].floors[floorKey] = { name: floorKey, bosses: [] };
-            BOSS_NAMES.forEach(bossName => {
+            currentNames.forEach(bossName => {
                 BOSS_DATA[type].floors[floorKey].bosses.push({
-                    id: type.toLowerCase() + '_' + p + '_' + bossName.toLowerCase(),
+                    id: type.toLowerCase() + '_' + p + '_' + bossName.replace(/[\[\]\s\.]+/g, '_').toLowerCase(),
                     name: bossName, respawnTime: 0, lastRespawnTime: null, alerted: false, 
-                    floor: floorKey, type: type, image: BOSS_IMAGES[bossName], notSure: false
+                    floor: floorKey, type: type, image: BOSS_IMAGES[bossName] || "https://placehold.co/100x100/111/d4af37?text=Boss", notSure: false
                 });
             });
         }
