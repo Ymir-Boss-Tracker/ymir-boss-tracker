@@ -221,7 +221,7 @@ window.killBoss = (id) => {
     }
 
     b.respawnTime = now + duration; b.alerted = false;
-    b.notSure = false;
+    // Removida limpeza automática da incerteza
     save(); updateSingleCardDOM(id);
 };
 
@@ -242,7 +242,7 @@ window.setManualTime = (id) => {
     }
 
     b.respawnTime = d.getTime() + duration; b.alerted = false;
-    b.notSure = false;
+    // Removida limpeza automática da incerteza
     inputEl.value = ""; save(); updateSingleCardDOM(id);
 };
 
@@ -406,7 +406,7 @@ async function sendReportToDiscord(filterType) {
         BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
             if (b.respawnTime > 0) {
                 found = true;
-                const cleanName = b.name.replace(/<br>/g, ' '); // Garante remoção do br
+                const cleanName = b.name.replace(/<br>/g, ' ');
                 const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
                 let uncertaintyStr = b.notSure ? " ⚠️ **(Incerteza)**" : "";
                 
