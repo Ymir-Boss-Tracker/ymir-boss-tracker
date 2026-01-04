@@ -257,12 +257,19 @@ function updateBossTimers() {
                 const diff = boss.respawnTime - now;
                 const windowEnd = boss.respawnTime + (MYRK_MAX_MS - MYRK_MIN_MS);
 
-                // Lógica de Myrkheimr: Janela entre 50 e 60 min
                 if (isMyrk) {
+                    // Logica Myrkheimr: Alerta visual/sonoro logo no início da janela (diff <= 0)
                     if (now >= boss.respawnTime && now <= windowEnd) {
                         timerTxt.textContent = "JANELA!"; timerTxt.style.color = "#e74c3c";
                         bar.style.width = "100%"; bar.style.backgroundColor = "#e74c3c";
-                        card.classList.add('fire-alert');
+                        card.classList.add('fire-alert'); 
+                        
+                        // Toca o alarme assim que entra na janela
+                        if (!boss.alerted) { 
+                            document.getElementById('alert-sound').play().catch(() => {}); 
+                            boss.alerted = true; 
+                            save(); 
+                        }
                     } else if (now > windowEnd) {
                         boss.respawnTime = 0;
                         save();
@@ -270,7 +277,7 @@ function updateBossTimers() {
                         updateCountdown(boss, diff, timerTxt, bar, card, MYRK_MIN_MS);
                     }
                 } else {
-                    // Lógica padrão
+                    // Logica padrão: Alerta visual/sonoro 5 min antes
                     if (diff <= 0) {
                         boss.respawnTime = 0;
                     } else {
