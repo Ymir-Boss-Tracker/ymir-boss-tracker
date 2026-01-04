@@ -28,55 +28,34 @@ header.main-banner {
     position: relative; z-index: 10; cursor: pointer; transition: 0.3s;
 }
 
-.next-boss-timer { font-size: 1.8rem; color: #d4af37; display: block; }
-
 .view-toggle-container { margin: 20px 2.5%; display: flex; justify-content: flex-end; }
 .toggle-btn { 
     background: #1a1a1a; color: #d4af37; border: 1px solid #d4af37; 
     padding: 10px 20px; border-radius: 5px; cursor: pointer; font-weight: bold; transition: 0.3s;
 }
-.toggle-btn:hover { background: #d4af37; color: #000; }
 
 .type-section { padding: 20px; width: 95%; margin: 0 auto; }
 .type-section h2 { color: #d4af37; border-bottom: 1px solid rgba(212, 175, 55, 0.2); padding-bottom: 10px; }
 
-.boss-grid { 
-    display: flex; flex-wrap: nowrap; justify-content: center; gap: 15px; 
-    overflow-x: auto; padding: 10px 5px 20px 5px;
-}
+.boss-grid { display: flex; flex-wrap: nowrap; justify-content: center; gap: 15px; overflow-x: auto; padding: 10px 5px 20px 5px; }
 
-.floor-section h3 { 
-    background: rgba(26, 26, 26, 0.8); padding: 10px; 
-    border-left: 4px solid #d4af37; margin-bottom: 10px;
-}
-
-.boss-card { 
-    background: #111; border: 1px solid #2a2a2a; border-radius: 10px; 
-    padding: 15px; min-width: 280px; transition: 0.3s; text-align: left; position: relative;
-}
-
+.boss-card { background: #111; border: 1px solid #2a2a2a; border-radius: 10px; padding: 15px; min-width: 280px; text-align: left; position: relative; }
 .boss-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.boss-thumb { width: 60px; height: 60px; border-radius: 8px; border: 2px solid #d4af37; object-fit: cover; }
+.boss-thumb { width: 50px; height: 50px; border-radius: 6px; border: 1px solid #d4af37; object-fit: cover; }
 
+/* Estilo de Janela Aberta */
 .boss-card.window-open { border-color: #2ecc71; box-shadow: 0 0 15px rgba(46, 204, 113, 0.4); }
 .window-status { font-size: 0.8rem; font-weight: bold; color: #2ecc71; display: block; text-align: center; }
 
 .boss-card.alert { border-color: #ff4d4d; animation: pulse 1.5s infinite; }
 .boss-card.fire-alert { border-color: #ff8c00 !important; animation: fire-glow 0.8s infinite alternate; }
 
-@keyframes fire-glow {
-    0% { box-shadow: 0 0 10px #ff4500, 0 0 20px #ff8c00; }
-    100% { box-shadow: 0 0 20px #ff0000, 0 0 40px #ff4500; }
-}
-@keyframes pulse {
-    0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); }
-    70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
-}
+@keyframes fire-glow { 0% { box-shadow: 0 0 10px #ff4500; } 100% { box-shadow: 0 0 25px #ff0000; } }
+@keyframes pulse { 0% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0.4); } 70% { box-shadow: 0 0 0 10px rgba(255, 77, 77, 0); } 100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); } }
 
-.timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center;}
+.timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center; }
 .boss-progress-container { background: #222; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 15px; }
-.boss-progress-bar { height: 100%; transition: width 1s linear; }
+.boss-progress-bar { height: 100%; transition: width 1s linear; background: #d4af37; }
 
 .static-times { background: #080808; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 10px; }
 .static-times span { color: #fff; }
@@ -85,11 +64,10 @@ header.main-banner {
 .manual-box { display: flex; gap: 5px; margin: 10px 0; }
 .manual-box input { flex: 1; background: #000; color: #fff; border: 1px solid #333; padding: 5px; border-radius: 4px; }
 .conf-btn { background: #2ecc71; color: white; border: none; padding: 5px 10px; border-radius: 4px; cursor: pointer; }
-
 .action-footer { display: flex; gap: 5px; }
 .undo-btn, .reset-btn { flex: 1; background: #333; color: #ccc; border: none; padding: 6px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; }
 
-.type-section.compact-mode .boss-card { min-width: 200px; padding: 10px; }
+.type-section.compact-mode .boss-card { min-width: 200px; }
 .type-section.compact-mode .manual-box, .type-section.compact-mode .action-footer, .type-section.compact-mode .boss-thumb { display: none; }
 
 .discord-config { margin: 40px auto; max-width: 800px; padding: 0 20px; }
