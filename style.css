@@ -50,9 +50,13 @@ header.main-banner {
     border-left: 4px solid #d4af37; margin-bottom: 10px;
 }
 
+/* AJUSTE DE PROPORÇÃO DOS CARDS */
 .boss-card { 
     background: #111; border: 1px solid #2a2a2a; border-radius: 10px; 
-    padding: 15px; min-width: 280px; transition: 0.3s; text-align: left; position: relative;
+    padding: 15px; width: 280px; min-width: 280px; /* Largura fixa */
+    min-height: 520px; /* Altura mínima fixa para manter proporção */
+    display: flex; flex-direction: column; justify-content: space-between;
+    transition: 0.3s; text-align: left; position: relative;
 }
 
 .highlight-flash { border-color: #d4af37 !important; box-shadow: 0 0 20px #d4af37; }
@@ -77,19 +81,21 @@ header.main-banner {
     100% { box-shadow: 0 0 0 0 rgba(255, 77, 77, 0); }
 }
 
-.boss-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
-.boss-thumb { width: 65px; height: 65px; border-radius: 50%; border: 2px solid #d4af37; object-fit: cover; object-position: center 20%; }
+.boss-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; height: 70px; } /* Altura fixa para o header */
+.boss-header h4 { margin: 0; font-size: 0.95rem; }
+.boss-thumb { width: 65px; height: 65px; border-radius: 50%; border: 2px solid #d4af37; object-fit: cover; object-position: center 20%; flex-shrink: 0; }
 
 .timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center;}
 .boss-progress-container { background: #222; height: 6px; border-radius: 3px; overflow: hidden; margin-bottom: 15px; }
 .boss-progress-bar { height: 100%; transition: width 1s linear; }
 
 .static-times { background: #080808; padding: 8px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 10px; }
+.static-times p { margin: 5px 0; }
 .static-times span { color: #fff; }
 
 .uncertainty-box {
     background: rgba(255, 0, 0, 0.05); border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 4px; padding: 5px 8px; margin-bottom: 10px;
+    border-radius: 4px; padding: 8px; margin-bottom: 10px;
     display: flex; align-items: center; gap: 8px; font-size: 0.75rem; color: #bbb; cursor: pointer;
 }
 .uncertainty-box input { cursor: pointer; accent-color: #ff4d4d; }
@@ -103,8 +109,12 @@ header.main-banner {
 .action-footer { display: flex; gap: 5px; }
 .undo-btn, .reset-btn { flex: 1; background: #333; color: #ccc; border: none; padding: 6px; font-size: 0.75rem; border-radius: 4px; cursor: pointer; }
 
-.type-section.compact-mode .boss-card { min-width: 200px; padding: 10px; text-align: center; }
-.type-section.compact-mode .boss-header { justify-content: center; }
+/* AJUSTE MODO COMPACTO PARA FICAREM PROPORCIONAIS */
+.type-section.compact-mode .boss-card { 
+    width: 200px; min-width: 200px; min-height: 180px; 
+    padding: 10px; text-align: center; 
+}
+.type-section.compact-mode .boss-header { justify-content: center; height: 50px; }
 .type-section.compact-mode .manual-box, .type-section.compact-mode .action-footer, .type-section.compact-mode .uncertainty-box { display: none; }
 .type-section.compact-mode .timer { font-size: 1.2rem; }
 
