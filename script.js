@@ -406,7 +406,7 @@ async function sendReportToDiscord(filterType) {
         BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
             if (b.respawnTime > 0) {
                 found = true;
-                const cleanName = b.name.replace('<br>', ' ');
+                const cleanName = b.name.replace(/<br>/g, ' '); // Garante remoção do br
                 const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
                 let uncertaintyStr = b.notSure ? " ⚠️ **(Incerteza)**" : "";
                 
@@ -445,7 +445,7 @@ function exportReport() {
     for (const t in BOSS_DATA) {
         for (const f in BOSS_DATA[t].floors) {
             BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                const cleanName = b.name.replace('<br>', ' ');
+                const cleanName = b.name.replace(/<br>/g, ' ');
                 
                 if (b.respawnTime > 0) {
                     const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
