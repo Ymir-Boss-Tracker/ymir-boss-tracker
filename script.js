@@ -30,10 +30,10 @@ const ONE_MINUTE_MS = 1000 * 60;
 
 const BOSS_NAMES_FOLKVANGR = ["Lancer", "Berserker", "Skald", "Mage"];
 const BOSS_NAMES_MYRKHEIMR = [
-    "[Lv.66] Capitão Intruso Trésá l",
-    "[Lv.67] Capitão Intruso Troll Veterano",
-    "[Lv.68] Capitão Combatente Jotun Truculento",
-    "[Lv.68] Capitão Desordeiro Jotun do Fogo Atroz"
+    "[Lv.66] Capitão Intruso <br>Trésá l",
+    "[Lv.67] Capitão Intruso <br>Troll Veterano",
+    "[Lv.68] Capitão Combatente <br>Jotun Truculento",
+    "[Lv.68] Capitão Desordeiro <br>Jotun do Fogo Atroz"
 ];
 
 let BOSS_DATA = {};
@@ -103,7 +103,7 @@ function initializeBossData() {
             BOSS_DATA[type].floors[floorKey] = { name: floorKey, bosses: [] };
             currentNames.forEach(bossName => {
                 BOSS_DATA[type].floors[floorKey].bosses.push({
-                    id: type.toLowerCase() + '_' + p + '_' + bossName.replace(/[\[\]\s\.]+/g, '_').toLowerCase(),
+                    id: type.toLowerCase() + '_' + p + '_' + bossName.replace(/[\[\]\s\.<br>]+/g, '_').toLowerCase(),
                     name: bossName, respawnTime: 0, lastRespawnTime: null, alerted: false, 
                     floor: floorKey, type: type, image: BOSS_IMAGES[bossName] || "https://placehold.co/100x100/111/d4af37?text=Boss", notSure: false
                 });
@@ -178,7 +178,7 @@ function updateNextBossHighlight() {
         const diff = next.respawnTime - Date.now();
         const h = Math.floor(diff / 3600000).toString().padStart(2,'0'), m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0'), s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
         highlightDiv.setAttribute('onclick', `scrollToBoss('${next.id}')`);
-        highlightDiv.innerHTML = `<span>🎯 PRÓXIMO: <strong>${next.name}</strong> <small>(${next.typeLabel})</small></span><span class="next-boss-timer">${h}:${m}:${s}</span>`;
+        highlightDiv.innerHTML = `<span>🎯 PRÓXIMO: <strong>${next.name.replace('<br>', ' ')}</strong> <small>(${next.typeLabel})</small></span><span class="next-boss-timer">${h}:${m}:${s}</span>`;
     } else {
         highlightDiv.removeAttribute('onclick'); highlightDiv.innerHTML = "<span>⚔️ Nenhum boss em contagem.</span>";
     }
@@ -286,7 +286,7 @@ async function sendReportToDiscord(filterType) {
     let desc = `**⏳ PRÓXIMOS RESPAWNS (${filterType.toUpperCase()})**\n`;
     for (const f in BOSS_DATA[filterType].floors) {
         BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
-            if (b.respawnTime > 0) desc += `• **${b.name}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**${b.notSure ? " ⚠️" : ""}\n`;
+            if (b.respawnTime > 0) desc += `• **${b.name.replace('<br>', ' ')}** (${b.floor}) -> **${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}**${b.notSure ? " ⚠️" : ""}\n`;
         });
     }
     try {
@@ -301,7 +301,7 @@ function exportReport() {
     for (const t in BOSS_DATA) {
         for (const f in BOSS_DATA[t].floors) {
             BOSS_DATA[t].floors[f].bosses.forEach(b => {
-                if (b.respawnTime > 0) text += `${BOSS_DATA[t].name} - ${b.name}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}${b.notSure ? " [INCERTO]" : ""}\n`;
+                if (b.respawnTime > 0) text += `${BOSS_DATA[t].name} - ${b.name.replace('<br>', ' ')}: ${new Date(b.respawnTime).toLocaleTimeString('pt-BR')}${b.notSure ? " [INCERTO]" : ""}\n`;
             });
         }
     }
