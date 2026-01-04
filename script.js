@@ -16,16 +16,26 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 const provider = new GoogleAuthProvider();
 
+// Constantes de tempo
 const EIGHT_HOURS_MS = 8 * 60 * 60 * 1000;
 const TWO_HOURS_MS = 2 * 60 * 60 * 1000;
+const ONE_HOUR_MS = 1 * 60 * 60 * 1000; // Tempo Myrkheimr
 const FIVE_MINUTES_MS = 5 * 1000 * 60;
 const ONE_MINUTE_MS = 1000 * 60;
 
 const BOSS_DATA_STRUCTURE = {
-    'Comum': { name: 'Folkvangr Comum', bosses: ["Lancer", "Berserker", "Skald", "Mage"], type: 'Normal' },
-    'Universal': { name: 'Folkvangr Universal', bosses: ["Lancer", "Berserker", "Skald", "Mage"], type: 'Universal' },
-    'Myrk1': { name: 'Myrkheimr Canal 1', bosses: ["Trésá l", "Troll Veterano", "Jotun Truculento", "Jotun do Fogo Atroz"], type: 'Normal' },
-    'Myrk2': { name: 'Myrkheimr Canal 2', bosses: ["Trésá l", "Troll Veterano", "Jotun Truculento", "Jotun do Fogo Atroz"], type: 'Normal' }
+    'Comum': { name: 'Folkvangr Comum', bosses: ["Lancer", "Berserker", "Skald", "Mage"], duration: EIGHT_HOURS_MS },
+    'Universal': { name: 'Folkvangr Universal', bosses: ["Lancer", "Berserker", "Skald", "Mage"], duration: TWO_HOURS_MS },
+    'Myrk1': { 
+        name: 'Myrkheimr Canal 1', 
+        bosses: ["[Lv.35] Trésá l", "[Lv.40] Troll Veterano", "[Lv.45] Jotun Truculento", "[Lv.50] Jotun do Fogo Atroz"], 
+        duration: ONE_HOUR_MS 
+    },
+    'Myrk2': { 
+        name: 'Myrkheimr Canal 2', 
+        bosses: ["[Lv.35] Trésá l", "[Lv.40] Troll Veterano", "[Lv.45] Jotun Truculento", "[Lv.50] Jotun do Fogo Atroz"], 
+        duration: ONE_HOUR_MS 
+    }
 };
 
 let BOSS_DATA = {};
@@ -91,9 +101,9 @@ function initializeBossData() {
             BOSS_DATA[key].floors[floorKey] = { name: floorKey, bosses: [] };
             config.bosses.forEach(name => {
                 BOSS_DATA[key].floors[floorKey].bosses.push({
-                    id: `${key.toLowerCase()}_${p}_${name.replace(/\s+/g, '_').toLowerCase()}`,
+                    id: `${key.toLowerCase()}_${p}_${name.replace(/[\[\]\.\s]+/g, '_').toLowerCase()}`,
                     name: name, respawnTime: 0, lastRespawnTime: null, alerted: false,
-                    floor: floorKey, type: config.type, notSure: false
+                    floor: floorKey, typeKey: key, duration: config.duration, notSure: false
                 });
             });
         }
@@ -141,8 +151,7 @@ function updateSingleCardDOM(id) {
     const b = findBossById(id);
     const card = document.getElementById('card-' + id);
     if (!card) return;
-    const duration = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    card.querySelector('.label-morto span').textContent = b.respawnTime > 0 ? new Date(b.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--";
+    card.querySelector('.label-morto span').textContent = b.respawnTime > 0 ? new Date(b.respawnTime - b.duration).toLocaleTimeString('pt-BR') : "--:--";
     card.querySelector('.label-nasce span').textContent = b.respawnTime > 0 ? new Date(b.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
 }
 
@@ -150,8 +159,7 @@ window.toggleNotSure = (id) => { const b = findBossById(id); b.notSure = documen
 
 window.killBoss = (id) => {
     const b = findBossById(id); b.lastRespawnTime = b.respawnTime;
-    const duration = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = Date.now() + duration; b.alerted = false;
+    b.respawnTime = Date.now() + b.duration; b.alerted = false;
     save(); updateSingleCardDOM(id);
 };
 
@@ -162,8 +170,7 @@ window.setManualTime = (id) => {
     const parts = inputEl.value.split(':').map(Number);
     const d = new Date(); d.setHours(parts[0], parts[1], parts[2] || 0, 0);
     if (d > new Date()) d.setDate(d.getDate() - 1);
-    const duration = b.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-    b.respawnTime = d.getTime() + duration; b.alerted = false;
+    b.respawnTime = d.getTime() + b.duration; b.alerted = false;
     inputEl.value = ""; save(); updateSingleCardDOM(id);
 };
 
@@ -195,8 +202,7 @@ function updateBossTimers() {
                     boss.respawnTime = 0; timerTxt.textContent = "DISPONÍVEL!"; timerTxt.style.color = "#2ecc71";
                     bar.style.width = "100%"; bar.style.backgroundColor = "#2ecc71"; card.classList.remove('alert', 'fire-alert');
                 } else {
-                    const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-                    const diff = boss.respawnTime - now, percent = (diff / duration) * 100;
+                    const diff = boss.respawnTime - now, percent = (diff / boss.duration) * 100;
                     bar.style.width = percent + '%';
                     if (diff <= ONE_MINUTE_MS) { card.classList.add('fire-alert'); timerTxt.style.color = "#ff8c00"; }
                     else if (diff <= FIVE_MINUTES_MS) {
@@ -222,8 +228,7 @@ function render() {
             const floorDiv = document.createElement('div'); floorDiv.className = 'floor-section';
             let floorHtml = `<h3>${f}</h3><div class="boss-grid">`;
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
-                const duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
-                const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--", nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
+                const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - boss.duration).toLocaleTimeString('pt-BR') : "--:--", nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
                 floorHtml += `<div class="boss-card" id="card-${boss.id}">
                     <h4>${boss.name}</h4>
                     <div class="timer" id="timer-${boss.id}">DISPONÍVEL!</div>
