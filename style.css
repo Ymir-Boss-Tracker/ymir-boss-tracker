@@ -82,6 +82,7 @@ header.main-banner {
 
 .boss-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; height: 70px; }
 .boss-header h4 { margin: 0; font-size: 0.95rem; }
+.priority-badge { color: #d4af37; font-weight: bold; margin-right: 4px; }
 .boss-thumb { width: 65px; height: 65px; border-radius: 50%; border: 2px solid #d4af37; object-fit: cover; object-position: center 20%; flex-shrink: 0; }
 
 .timer { font-size: 1.6rem; font-weight: bold; color: #f1c40f; margin: 10px 0; text-align: center;}
