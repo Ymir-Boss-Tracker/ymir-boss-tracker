@@ -186,7 +186,6 @@ function updateSingleCardDOM(id) {
     const cb = document.getElementById('not-sure-' + id);
     if(cb) cb.checked = b.notSure;
 
-    // Forçar atualização visual imediata dos timers/barras
     updateBossTimers();
 }
 
@@ -289,23 +288,19 @@ function updateBossTimers() {
     const now = Date.now(); 
     updateNextBossHighlight();
 
-    // Lógica de Prioridade UNIFICADA para os 8 bosses de Myrkheimr (C1 + C2)
     let allMyrkBosses = [];
     ['Myrkheimr1', 'Myrkheimr2'].forEach(type => {
         for (const f in BOSS_DATA[type].floors) {
             BOSS_DATA[type].floors[f].bosses.forEach(b => { 
                 if(b.respawnTime > 0) allMyrkBosses.push(b); 
-                // Limpar badge visual antes de reordenar
                 const badge = document.getElementById('priority-' + b.id);
                 if(badge) badge.textContent = "";
             });
         }
     });
 
-    // Ordena todos os 8 bosses juntos pelo horário da janela
     allMyrkBosses.sort((a, b) => a.respawnTime - b.respawnTime);
     
-    // Aplica a numeração de 1º a 8º baseada na ordem global
     allMyrkBosses.forEach((b, idx) => {
         const badge = document.getElementById('priority-' + b.id);
         if(badge) badge.textContent = (idx + 1) + "º ";
@@ -325,29 +320,20 @@ function updateBossTimers() {
 
                 const isMyrk = boss.type.includes('Myrkheimr');
                 const diff = boss.respawnTime - now;
-                const windowEnd = boss.respawnTime + (MYRK_MAX_MS - MYRK_MIN_MS);
 
                 if (isMyrk) {
+                    const windowEnd = boss.respawnTime + (MYRK_MAX_MS - MYRK_MIN_MS);
                     if (now >= boss.respawnTime && now <= windowEnd) {
                         timerTxt.textContent = "JANELA!"; timerTxt.style.color = "#e74c3c";
                         bar.style.width = "100%"; bar.style.backgroundColor = "#e74c3c";
                         card.classList.add('fire-alert'); 
-                        
-                        if (!boss.alerted) { 
-                            document.getElementById('alert-sound').play().catch(() => {}); 
-                            boss.alerted = true; 
-                            save(); 
-                        }
+                        if (!boss.alerted) { document.getElementById('alert-sound').play().catch(() => {}); boss.alerted = true; save(); }
                     } else if (now > windowEnd) {
                         boss.respawnTime = 0; save();
                     } else {
                         const percent = Math.max(0, Math.min(100, (diff / MYRK_MIN_MS) * 100));
-                        bar.style.width = percent + '%';
-                        bar.style.backgroundColor = "#3498db";
-                        card.classList.remove('alert', 'fire-alert');
-                        timerTxt.style.color = "#f1c40f";
-                        boss.alerted = false;
-                        
+                        bar.style.width = percent + '%'; bar.style.backgroundColor = "#3498db";
+                        card.classList.remove('alert', 'fire-alert'); timerTxt.style.color = "#f1c40f"; boss.alerted = false;
                         const h = Math.floor(diff / 3600000).toString().padStart(2,'0'), m = Math.floor((diff % 3600000) / 60000).toString().padStart(2,'0'), s = Math.floor((diff % 60000) / 1000).toString().padStart(2,'0');
                         timerTxt.textContent = `${h}:${m}:${s}`;
                     }
@@ -367,11 +353,12 @@ function updateBossTimers() {
 function updateCountdown(boss, diff, timerTxt, bar, card, duration) {
     const percent = Math.max(0, Math.min(100, (diff / duration) * 100));
     bar.style.width = percent + '%';
+    bar.style.backgroundColor = "#3498db";
     
     if (diff <= ONE_MINUTE_MS) { 
-        card.classList.add('fire-alert'); timerTxt.style.color = "#ff8c00"; 
+        card.classList.add('fire-alert'); timerTxt.style.color = "#ff8c00"; bar.style.backgroundColor = "#ff8c00";
     } else if (diff <= FIVE_MINUTES_MS) {
-        card.classList.add('alert'); timerTxt.style.color = "#ff4d4d";
+        card.classList.add('alert'); timerTxt.style.color = "#ff4d4d"; bar.style.backgroundColor = "#ff4d4d";
         if (!boss.alerted) { document.getElementById('alert-sound').play().catch(() => {}); boss.alerted = true; save(); }
     } else { 
         card.classList.remove('alert', 'fire-alert'); timerTxt.style.color = "#f1c40f"; boss.alerted = false; 
@@ -394,7 +381,6 @@ function render() {
             BOSS_DATA[type].floors[f].bosses.forEach(boss => {
                 let duration = boss.type === 'Universal' ? TWO_HOURS_MS : EIGHT_HOURS_MS;
                 if (boss.type.includes('Myrkheimr')) duration = MYRK_MIN_MS;
-
                 const mStr = boss.respawnTime > 0 ? new Date(boss.respawnTime - duration).toLocaleTimeString('pt-BR') : "--:--", nStr = boss.respawnTime > 0 ? new Date(boss.respawnTime).toLocaleTimeString('pt-BR') : "--:--";
                 floorHtml += `<div class="boss-card" id="card-${boss.id}">
                     <div class="boss-header">
@@ -418,7 +404,6 @@ function render() {
 
 async function sendReportToDiscord(filterType) {
     if (!userWebhookUrl) return alert("Configure o Webhook!");
-    
     let btnId;
     switch(filterType) {
         case 'Comum': btnId = 'sync-comum-btn'; break;
@@ -426,13 +411,10 @@ async function sendReportToDiscord(filterType) {
         case 'Myrkheimr1': btnId = 'sync-myrk1-btn'; break;
         case 'Myrkheimr2': btnId = 'sync-myrk2-btn'; break;
     }
-    
     const btn = document.getElementById(btnId), originalText = btn.textContent;
     btn.textContent = "⌛..."; btn.disabled = true;
-    
     let desc = `**⏳ PRÓXIMOS RESPAWNS (${BOSS_DATA[filterType].name.toUpperCase()})**\n`;
     let bossList = [];
-
     let globalMyrk = [];
     if(filterType.includes('Myrk')) {
         ['Myrkheimr1', 'Myrkheimr2'].forEach(t => {
@@ -442,23 +424,17 @@ async function sendReportToDiscord(filterType) {
         });
         globalMyrk.sort((a, b) => a.respawnTime - b.respawnTime);
     }
-
     for (const f in BOSS_DATA[filterType].floors) {
-        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { 
-            if (b.respawnTime > 0) bossList.push(b);
-        });
+        BOSS_DATA[filterType].floors[f].bosses.forEach(b => { if (b.respawnTime > 0) bossList.push(b); });
     }
-
     if (bossList.length === 0) {
         desc += "_Nenhum boss em contagem no momento._";
     } else {
         bossList.sort((a, b) => a.respawnTime - b.respawnTime);
-
         bossList.forEach((b) => {
             const cleanName = b.name.replace(/<br>/g, ' ');
             const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
             let uncertaintyStr = b.notSure ? " ⚠️ **(Incerteza)**" : "";
-            
             if (b.type.includes('Myrkheimr')) {
                 const globalIndex = globalMyrk.findIndex(gb => gb.id === b.id) + 1;
                 const windowEnd = new Date(b.respawnTime + (MYRK_MAX_MS - MYRK_MIN_MS)).toLocaleTimeString('pt-BR');
@@ -468,18 +444,12 @@ async function sendReportToDiscord(filterType) {
             }
         });
     }
-
     try {
         const response = await fetch(userWebhookUrl, { 
             method: 'POST', 
             headers: { 'Content-Type': 'application/json' }, 
             body: JSON.stringify({ 
-                embeds: [{ 
-                    title: `⚔️ STATUS ${BOSS_DATA[filterType].name}`, 
-                    description: desc, 
-                    color: filterType.includes('Myrk') ? 10181046 : 3066993, 
-                    timestamp: new Date().toISOString() 
-                }] 
+                embeds: [{ title: `⚔️ STATUS ${BOSS_DATA[filterType].name}`, description: desc, color: filterType.includes('Myrk') ? 10181046 : 3066993, timestamp: new Date().toISOString() }] 
             }) 
         });
         btn.textContent = response.ok ? "✅ OK" : "❌ Erro";
@@ -493,16 +463,12 @@ function exportReport() {
         for (const f in BOSS_DATA[t].floors) {
             BOSS_DATA[t].floors[f].bosses.forEach(b => {
                 const cleanName = b.name.replace(/<br>/g, ' ');
-                
                 if (b.respawnTime > 0) {
                     const timeStr = new Date(b.respawnTime).toLocaleTimeString('pt-BR');
                     if (b.type.includes('Myrkheimr')) {
                         const windowEnd = new Date(b.respawnTime + (MYRK_MAX_MS - MYRK_MIN_MS)).toLocaleTimeString('pt-BR');
                         text += `${BOSS_DATA[t].name} - ${cleanName}: JANELA ${timeStr} - ${windowEnd}${b.notSure ? " [INCERTO]" : ""}\n`;
-                        
-                        if (b.history && b.history.length > 0) {
-                            text += `   ↳ Histórico (Últimas mortes): ${b.history.map(h => new Date(h).toLocaleTimeString('pt-BR')).join(' | ')}\n`;
-                        }
+                        if (b.history && b.history.length > 0) text += `   ↳ Histórico (Últimas mortes): ${b.history.map(h => new Date(h).toLocaleTimeString('pt-BR')).join(' | ')}\n`;
                     } else {
                         text += `${BOSS_DATA[t].name} - ${cleanName}: ${timeStr}${b.notSure ? " [INCERTO]" : ""}\n`;
                     }
